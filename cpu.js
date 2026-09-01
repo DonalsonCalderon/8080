@@ -125,7 +125,9 @@ class Intel8080 {
         bytes[1] = this.fetch();
         bytes[2] = this.fetch();
         bytes[3] = this.fetch();
-        return new Float32Array(buffer)[0];
+        
+        const floatVal = new Float32Array(buffer)[0];
+        return isNaN(floatVal) ? 0.0 : floatVal;
     }
 
     push(val) {
