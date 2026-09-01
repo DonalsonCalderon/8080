@@ -80,12 +80,12 @@ class Assembler8080 {
             'CPI': { code: 0xFE, bytes: 2 },
             'RST': { bytes: 1 },
 
-            // Instrucciones para el Coprocesador FPU (Prefijo 0xED)
+            // FPU: FLD0/FLD1 requieren 6 bytes (0xED + subOp + 4 bytes float)
             'FADD': { bytes: 2 },
             'FSUB': { bytes: 2 },
             'FMUL': { bytes: 2 },
-            'FLD0': { bytes: 3 },
-            'FLD1': { bytes: 3 },
+            'FLD0': { bytes: 6 },
+            'FLD1': { bytes: 6 },
             'FSWAP': { bytes: 2 }
         };
         this.regs = { 'B': 0, 'C': 1, 'D': 2, 'E': 3, 'H': 4, 'L': 5, 'M': 6, 'A': 7 };
@@ -144,10 +144,10 @@ class Assembler8080 {
                     binary[pc++] = this.parseValue(line.tokens[i], labels) & 0xFF;
                 }
             } else {
-                const code = this.generateOpcode(line, labels);
-                binary[pc++] = code.byte1;
-                if (line.info.bytes > 1) binary[pc++] = code.byte2;
-                if (line.info.bytes > 2) binary[pc++] = code.byte3;
+                const bytes = this.generateOpcode(line, labels);
+                for (let i = 0; i < bytes.length; i++) {
+                    binary[pc++] = bytes[i];
+                }
             }
             if (pc > maxAddr) maxAddr = pc;
         });
@@ -158,90 +158,104 @@ class Assembler8080 {
     generateOpcode(line, labels) {
         const mnemonic = line.mnemonic;
         const tokens = line.tokens;
-        let byte1 = line.info ? line.info.code : 0;
-        let byte2 = 0, byte3 = 0;
+        let bytes = [];
 
         const r1 = tokens[1] ? tokens[1].toUpperCase() : null;
         const r2 = tokens[2] ? tokens[2].toUpperCase() : null;
 
-        // Decodificación especial FPU
+        // Decodificación FPU
         if (['FADD', 'FSUB', 'FMUL', 'FLD0', 'FLD1', 'FSWAP'].includes(mnemonic)) {
-            byte1 = 0xED; // Prefijo de la FPU
+            bytes.push(0xED); // Prefijo FPU
             switch (mnemonic) {
-                case 'FADD':  byte2 = 0x01; break;
-                case 'FSUB':  byte2 = 0x02; break;
-                case 'FMUL':  byte2 = 0x03; break;
-                case 'FLD0':  
-                    byte2 = 0x04; 
-                    byte3 = Math.floor(this.parseValue(tokens[1], labels)) & 0xFF;
+                case 'FADD':  bytes.push(0x01); break;
+                case 'FSUB':  bytes.push(0x02); break;
+                case 'FMUL':  bytes.push(0x03); break;
+                case 'FLD0':
+                case 'FLD1': {
+                    bytes.push(mnemonic === 'FLD0' ? 0x04 : 0x05);
+                    const val = this.parseValue(tokens[1], labels);
+                    
+                    // Empaquetar Float32 de IEEE 754 a 4 bytes binarios
+                    const buffer = new ArrayBuffer(4);
+                    new Float32Array(buffer)[0] = val;
+                    const u8 = new Uint8Array(buffer);
+                    bytes.push(u8[0], u8[1], u8[2], u8[3]);
                     break;
-                case 'FLD1':  
-                    byte2 = 0x05; 
-                    byte3 = Math.floor(this.parseValue(tokens[1], labels)) & 0xFF;
-                    break;
-                case 'FSWAP': byte2 = 0x06; break;
+                }
+                case 'FSWAP': bytes.push(0x06); break;
             }
-        } else if (mnemonic === 'MOV') {
+            return bytes;
+        }
+
+        let byte1 = line.info ? line.info.code : 0;
+        let byte2 = 0, byte3 = 0;
+
+        if (mnemonic === 'MOV') {
             if (this.regs[r1] === undefined) throw new Error(`Invalid register: ${r1} in MOV instruction`);
             if (this.regs[r2] === undefined) throw new Error(`Invalid register: ${r2} in MOV instruction`);
             if (r1 === 'M' && r2 === 'M') throw new Error(`Cannot use MOV M, M (invalid instruction)`);
             byte1 = 0x40 | (this.regs[r1] << 3) | this.regs[r2];
+            bytes.push(byte1);
         } else if (mnemonic === 'MVI') {
             if (this.regs[r1] === undefined) throw new Error(`Invalid register: ${r1} in MVI instruction`);
             byte1 = 0x06 | (this.regs[r1] << 3);
             byte2 = this.parseValue(tokens[2], labels) & 0xFF;
+            bytes.push(byte1, byte2);
         } else if (mnemonic === 'LXI') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in LXI instruction`);
             byte1 = 0x01 | (this.rps[r1] << 4);
             const val = this.parseValue(tokens[2], labels);
             byte2 = val & 0xFF;
             byte3 = (val >> 8) & 0xFF;
+            bytes.push(byte1, byte2, byte3);
         } else if (['ADD', 'ADC', 'SUB', 'SBB', 'ANA', 'XRA', 'ORA', 'CMP'].includes(mnemonic)) {
             if (this.regs[r1] === undefined) throw new Error(`Invalid register: ${r1} in ${mnemonic} instruction`);
             const base = { 'ADD': 0x80, 'ADC': 0x88, 'SUB': 0x90, 'SBB': 0x98, 'ANA': 0xA0, 'XRA': 0xA8, 'ORA': 0xB0, 'CMP': 0xB8 };
             byte1 = base[mnemonic] | this.regs[r1];
+            bytes.push(byte1);
         } else if (mnemonic === 'INR') {
             if (this.regs[r1] === undefined) throw new Error(`Invalid register: ${r1} in INR instruction`);
-            byte1 = 0x04 | (this.regs[r1] << 3);
+            bytes.push(0x04 | (this.regs[r1] << 3));
         } else if (mnemonic === 'DCR') {
             if (this.regs[r1] === undefined) throw new Error(`Invalid register: ${r1} in DCR instruction`);
-            byte1 = 0x05 | (this.regs[r1] << 3);
+            bytes.push(0x05 | (this.regs[r1] << 3));
         } else if (mnemonic === 'INX') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in INX instruction`);
-            byte1 = 0x03 | (this.rps[r1] << 4);
+            bytes.push(0x03 | (this.rps[r1] << 4));
         } else if (mnemonic === 'DCX') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in DCX instruction`);
-            byte1 = 0x0B | (this.rps[r1] << 4);
+            bytes.push(0x0B | (this.rps[r1] << 4));
         } else if (mnemonic === 'DAD') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in DAD instruction`);
-            byte1 = 0x09 | (this.rps[r1] << 4);
+            bytes.push(0x09 | (this.rps[r1] << 4));
         } else if (mnemonic === 'PUSH') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in PUSH instruction`);
-            byte1 = 0xC5 | (this.rps[r1] << 4);
+            bytes.push(0xC5 | (this.rps[r1] << 4));
         } else if (mnemonic === 'POP') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in POP instruction`);
-            byte1 = 0xC1 | (this.rps[r1] << 4);
+            bytes.push(0xC1 | (this.rps[r1] << 4));
         } else if (mnemonic === 'STAX') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in STAX instruction`);
-            byte1 = 0x02 | (this.rps[r1] << 4);
+            bytes.push(0x02 | (this.rps[r1] << 4));
         } else if (mnemonic === 'LDAX') {
             if (this.rps[r1] === undefined) throw new Error(`Invalid register pair: ${r1} in LDAX instruction`);
-            byte1 = 0x0A | (this.rps[r1] << 4);
+            bytes.push(0x0A | (this.rps[r1] << 4));
         } else if (mnemonic === 'RST') {
             const val = this.parseValue(tokens[1], labels);
             if (isNaN(val) || val < 0 || val > 7) {
                 throw new Error(`Invalid RST number: ${tokens[1]}. Must be 0-7.`);
             }
-            byte1 = 0xC7 | (val << 3);
+            bytes.push(0xC7 | (val << 3));
         } else if (line.info.bytes === 3) {
             const val = this.parseValue(tokens[1], labels);
-            byte2 = val & 0xFF;
-            byte3 = (val >> 8) & 0xFF;
+            bytes.push(byte1, val & 0xFF, (val >> 8) & 0xFF);
         } else if (line.info.bytes === 2) {
-            byte2 = this.parseValue(tokens[1], labels) & 0xFF;
+            bytes.push(byte1, this.parseValue(tokens[1], labels) & 0xFF);
+        } else {
+            bytes.push(byte1);
         }
 
-        return { byte1, byte2, byte3 };
+        return bytes;
     }
 
     parseValue(val, labels = {}) {
