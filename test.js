@@ -1,4 +1,4 @@
-// test.js - Unit tests for Intel 8080 CPU and Assembler
+// test.js - Unit tests for Intel 8080 CPU, FPU Coprocessor, and Assembler
 const Intel8080 = require('./cpu.js');
 const Assembler8080 = require('./assembler.js');
 const assert = require('assert');
@@ -26,6 +26,10 @@ runTest('CPU Reset & Initial Values', () => {
     assert.strictEqual(cpu.flags.z, false);
     assert.strictEqual(cpu.flags.cy, false);
     assert.strictEqual(cpu.halted, false);
+    if (cpu.fpu) {
+        assert.strictEqual(cpu.fpu.fp0, 0);
+        assert.strictEqual(cpu.fpu.fp1, 0);
+    }
 });
 
 runTest('INR / DCR AC Flag Behavior', () => {
@@ -37,13 +41,13 @@ runTest('INR / DCR AC Flag Behavior', () => {
     assert.strictEqual(cpu.registers.a, 0x10);
     assert.strictEqual(cpu.flags.ac, true, 'INR 0x0F should set AC flag');
 
-    // DCR 0x10 -> should clear AC (as there is a borrow out of low order nibble, complement of borrow is 0)
+    // DCR 0x10 -> should clear AC
     cpu.registers.a = 0x10;
     cpu.execute(0x3D); // DCR A
     assert.strictEqual(cpu.registers.a, 0x0F);
     assert.strictEqual(cpu.flags.ac, false, 'DCR 0x10 should clear AC flag');
 
-    // DCR 0x0F -> should set AC (as there is no borrow out of low order nibble, complement of borrow is 1)
+    // DCR 0x0F -> should set AC
     cpu.registers.a = 0x0F;
     cpu.execute(0x3D); // DCR A
     assert.strictEqual(cpu.registers.a, 0x0E);
@@ -58,11 +62,7 @@ runTest('Subtraction AC and Carry Flag Logic', () => {
     cpu.executeALU(2, 0x05); // SUB 0x05 (ALU op 2 is SUB)
     assert.strictEqual(cpu.registers.a, 0x39);
     assert.strictEqual(cpu.flags.cy, false);
-    // (0x0E & 0x0F) - (0x05 & 0x0F) = 0x0E - 0x05 = 0x09 >= 0, so AC flag calculation should match physical 8080
-    // In physical 8080, SUB does: A + ~B + 1.
-    // Let's check AC logic: 0x3E + ~0x05 + 1 = 0x3E + 0xFA + 1. Low nibbles: 0x0E + 0x0A + 1 = 0x19 (carry out is 1)
-    // Physical 8080 does not invert AC after subtraction, so AC = 1.
-    assert.strictEqual(cpu.flags.ac, true, 'SUB 0x3E - 0x05 should result in AC = 1 (since 0x0E + 0x0A + 1 = 0x19)');
+    assert.strictEqual(cpu.flags.ac, true, 'SUB 0x3E - 0x05 should result in AC = 1');
 
     // Test: 0x00 - 0x01
     cpu.reset();
@@ -70,7 +70,6 @@ runTest('Subtraction AC and Carry Flag Logic', () => {
     cpu.executeALU(2, 0x01); // SUB 0x01
     assert.strictEqual(cpu.registers.a, 0xFF);
     assert.strictEqual(cpu.flags.cy, true, '0x00 - 0x01 should set carry (borrow)');
-    // Low nibbles: 0x00 + ~0x01 + 1 = 0x00 + 0x0E + 1 = 0x0F (carry out is 0). Thus AC = 0.
     assert.strictEqual(cpu.flags.ac, false, '0x00 - 0x01 should result in AC = 0');
 });
 
@@ -150,6 +149,38 @@ runTest('Assembler Rejects Invalid Code & Registers', () => {
     assert.throws(() => {
         assembler.assemble('JMP UNDEFINED_LABEL');
     }, /Undefined label/i);
+});
+
+runTest('FPU Operations & Register Integrity', () => {
+    const cpu = new Intel8080();
+    const assembler = new Assembler8080();
+
+    const source = `
+        FLD0 15
+        FLD1 25
+        FADD
+        FSWAP
+    `;
+
+    const result = assembler.assemble(source);
+    cpu.memory.set(result.binary);
+
+    // Execute FLD0 15
+    cpu.step();
+    assert.strictEqual(cpu.fpu.fp0, 15, 'FLD0 should set fp0 to 15');
+
+    // Execute FLD1 25
+    cpu.step();
+    assert.strictEqual(cpu.fpu.fp1, 25, 'FLD1 should set fp1 to 25');
+
+    // Execute FADD (fp0 = 15 + 25 = 40)
+    cpu.step();
+    assert.strictEqual(cpu.fpu.fp0, 40, 'FADD should sum fp0 and fp1 into fp0');
+
+    // Execute FSWAP (fp0 = 25, fp1 = 40)
+    cpu.step();
+    assert.strictEqual(cpu.fpu.fp0, 25, 'FSWAP should set fp0 to 25');
+    assert.strictEqual(cpu.fpu.fp1, 40, 'FSWAP should set fp1 to 40');
 });
 
 console.log('All tests completed successfully!');
