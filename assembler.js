@@ -79,6 +79,14 @@ class Assembler8080 {
             'CM': { code: 0xFC, bytes: 3 },
             'CPI': { code: 0xFE, bytes: 2 },
             'RST': { bytes: 1 },
+
+            // Instrucciones para el Coprocesador FPU (Prefijo 0xED)
+            'FADD': { bytes: 2 },
+            'FSUB': { bytes: 2 },
+            'FMUL': { bytes: 2 },
+            'FLD0': { bytes: 3 },
+            'FLD1': { bytes: 3 },
+            'FSWAP': { bytes: 2 }
         };
         this.regs = { 'B': 0, 'C': 1, 'D': 2, 'E': 3, 'H': 4, 'L': 5, 'M': 6, 'A': 7 };
         this.rps = { 'B': 0, 'C': 0, 'D': 1, 'E': 1, 'H': 2, 'L': 2, 'SP': 3, 'PSW': 3, 'BC': 0, 'DE': 1, 'HL': 2 };
@@ -150,13 +158,30 @@ class Assembler8080 {
     generateOpcode(line, labels) {
         const mnemonic = line.mnemonic;
         const tokens = line.tokens;
-        let byte1 = line.info.code;
+        let byte1 = line.info ? line.info.code : 0;
         let byte2 = 0, byte3 = 0;
 
         const r1 = tokens[1] ? tokens[1].toUpperCase() : null;
         const r2 = tokens[2] ? tokens[2].toUpperCase() : null;
 
-        if (mnemonic === 'MOV') {
+        // Decodificación especial FPU
+        if (['FADD', 'FSUB', 'FMUL', 'FLD0', 'FLD1', 'FSWAP'].includes(mnemonic)) {
+            byte1 = 0xED; // Prefijo de la FPU
+            switch (mnemonic) {
+                case 'FADD':  byte2 = 0x01; break;
+                case 'FSUB':  byte2 = 0x02; break;
+                case 'FMUL':  byte2 = 0x03; break;
+                case 'FLD0':  
+                    byte2 = 0x04; 
+                    byte3 = this.parseValue(tokens[1], labels) & 0xFF;
+                    break;
+                case 'FLD1':  
+                    byte2 = 0x05; 
+                    byte3 = this.parseValue(tokens[1], labels) & 0xFF;
+                    break;
+                case 'FSWAP': byte2 = 0x06; break;
+            }
+        } else if (mnemonic === 'MOV') {
             if (this.regs[r1] === undefined) throw new Error(`Invalid register: ${r1} in MOV instruction`);
             if (this.regs[r2] === undefined) throw new Error(`Invalid register: ${r2} in MOV instruction`);
             if (r1 === 'M' && r2 === 'M') throw new Error(`Cannot use MOV M, M (invalid instruction)`);
@@ -208,11 +233,11 @@ class Assembler8080 {
                 throw new Error(`Invalid RST number: ${tokens[1]}. Must be 0-7.`);
             }
             byte1 = 0xC7 | (val << 3);
-        } else if (line.info.bytes === 3) { // JMP, CALL, etc.
+        } else if (line.info.bytes === 3) {
             const val = this.parseValue(tokens[1], labels);
             byte2 = val & 0xFF;
             byte3 = (val >> 8) & 0xFF;
-        } else if (line.info.bytes === 2) { // ADI, OUT, etc.
+        } else if (line.info.bytes === 2) {
             byte2 = this.parseValue(tokens[1], labels) & 0xFF;
         }
 
@@ -223,7 +248,6 @@ class Assembler8080 {
         if (!val) return 0;
         if (labels[val] !== undefined) return labels[val];
 
-        // If it starts with a letter and is not a hex constant, it might be an undefined label
         const isHexConstant = val.endsWith('H') || val.endsWith('h') || val.startsWith('0X') || val.startsWith('0x');
 
         let parsed;
@@ -236,7 +260,6 @@ class Assembler8080 {
         }
 
         if (isNaN(parsed)) {
-            // Check if it looks like a label (starts with letter)
             if (/^[A-Za-z_]/.test(val)) {
                 throw new Error(`Undefined label: ${val}`);
             } else {
