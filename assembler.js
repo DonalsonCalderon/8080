@@ -141,7 +141,7 @@ class Assembler8080 {
             let pc = line.pc;
             if (line.type === 'data') {
                 for (let i = 1; i < line.tokens.length; i++) {
-                    binary[pc++] = this.parseValue(line.tokens[i], labels);
+                    binary[pc++] = this.parseValue(line.tokens[i], labels) & 0xFF;
                 }
             } else {
                 const code = this.generateOpcode(line, labels);
@@ -173,11 +173,11 @@ class Assembler8080 {
                 case 'FMUL':  byte2 = 0x03; break;
                 case 'FLD0':  
                     byte2 = 0x04; 
-                    byte3 = this.parseValue(tokens[1], labels) & 0xFF;
+                    byte3 = Math.floor(this.parseValue(tokens[1], labels)) & 0xFF;
                     break;
                 case 'FLD1':  
                     byte2 = 0x05; 
-                    byte3 = this.parseValue(tokens[1], labels) & 0xFF;
+                    byte3 = Math.floor(this.parseValue(tokens[1], labels)) & 0xFF;
                     break;
                 case 'FSWAP': byte2 = 0x06; break;
             }
@@ -248,15 +248,13 @@ class Assembler8080 {
         if (!val) return 0;
         if (labels[val] !== undefined) return labels[val];
 
-        const isHexConstant = val.endsWith('H') || val.endsWith('h') || val.startsWith('0X') || val.startsWith('0x');
-
         let parsed;
         if (val.endsWith('H') || val.endsWith('h')) {
             parsed = parseInt(val.slice(0, -1), 16);
         } else if (val.startsWith('0X') || val.startsWith('0x')) {
             parsed = parseInt(val, 16);
         } else {
-            parsed = parseInt(val, 10);
+            parsed = parseFloat(val);
         }
 
         if (isNaN(parsed)) {
