@@ -126,7 +126,9 @@ class Intel8080 {
         bytes[2] = this.fetch();
         bytes[3] = this.fetch();
         
-        const floatVal = new Float32Array(buffer)[0];
+        // Uso de DataView para asegurar decodificación Little-Endian exacta
+        const view = new DataView(buffer);
+        const floatVal = view.getFloat32(0, true); // 'true' = Little Endian
         return isNaN(floatVal) ? 0.0 : floatVal;
     }
 
