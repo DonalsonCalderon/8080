@@ -80,7 +80,7 @@ class Assembler8080 {
             'CPI': { code: 0xFE, bytes: 2 },
             'RST': { bytes: 1 },
 
-            // FPU: FLD0/FLD1 requieren 6 bytes (0xED + subOp + 4 bytes float)
+            // FPU: FLD0/FLD1 requieren 6 bytes exactos
             'FADD': { bytes: 2 },
             'FSUB': { bytes: 2 },
             'FMUL': { bytes: 2 },
@@ -175,9 +175,11 @@ class Assembler8080 {
                     bytes.push(mnemonic === 'FLD0' ? 0x04 : 0x05);
                     const val = this.parseValue(tokens[1], labels);
                     
-                    // Empaquetar Float32 de IEEE 754 a 4 bytes binarios
+                    // Empaquetar Float32 mediante DataView para garantizar orden Little-Endian
                     const buffer = new ArrayBuffer(4);
-                    new Float32Array(buffer)[0] = val;
+                    const view = new DataView(buffer);
+                    view.setFloat32(0, val, true); // true = Little Endian
+                    
                     const u8 = new Uint8Array(buffer);
                     bytes.push(u8[0], u8[1], u8[2], u8[3]);
                     break;
