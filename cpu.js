@@ -14,7 +14,10 @@ class Intel8080 {
             h: 0,
             l: 0,
             sp: 0xFFFF,
-            pc: 0
+            pc: 0,
+            // Registros del Coprocesador de Punto Flotante (FPU)
+            fp0: 0.0,
+            fp1: 0.0
         };
         this.flags = {
             s: false,
@@ -167,7 +170,7 @@ class Intel8080 {
                 const res = (val - 1) & 0xFF;
                 this.setRegByCode(reg, res);
                 this.updateFlags(res);
-                this.flags.ac = !((res & 0x0F) === 0x0F); // Equivalent to "not (borrow out of low nibble)"
+                this.flags.ac = !((res & 0x0F) === 0x0F);
             } else {
                 const res = (val + 1) & 0xFF;
                 this.setRegByCode(reg, res);
@@ -270,6 +273,36 @@ class Intel8080 {
             case 0xD3: this.fetch(); break; // OUT (Ignored for now)
             case 0xFB: break; // EI
             case 0xF3: break; // DI
+
+            // Extension FPU
+            case 0xED:
+                this.executeFPU(this.fetch());
+                break;
+        }
+    }
+
+    executeFPU(subOpcode) {
+        switch (subOpcode) {
+            case 0x01: // FADD (fp0 = fp0 + fp1)
+                this.registers.fp0 = this.registers.fp0 + this.registers.fp1;
+                break;
+            case 0x02: // FSUB (fp0 = fp0 - fp1)
+                this.registers.fp0 = this.registers.fp0 - this.registers.fp1;
+                break;
+            case 0x03: // FMUL (fp0 = fp0 * fp1)
+                this.registers.fp0 = this.registers.fp0 * this.registers.fp1;
+                break;
+            case 0x04: // FLD0 <byte_val> (Carga entero en fp0)
+                this.registers.fp0 = this.fetch();
+                break;
+            case 0x05: // FLD1 <byte_val> (Carga entero en fp1)
+                this.registers.fp1 = this.fetch();
+                break;
+            case 0x06: // FSWAP (Intercambia fp0 y fp1)
+                const temp = this.registers.fp0;
+                this.registers.fp0 = this.registers.fp1;
+                this.registers.fp1 = temp;
+                break;
         }
     }
 
@@ -292,8 +325,6 @@ class Intel8080 {
             case 2: // SUB
                 res = this.registers.a - val;
                 this.flags.cy = res < 0;
-                // Intel 8080 logic for auxiliary carry in subtraction:
-                // AC is calculated by adding the 4-bit inverted value plus 1
                 this.flags.ac = ((this.registers.a & 0x0F) + ((~val) & 0x0F) + 1) > 0x0F;
                 this.registers.a = res & 0xFF;
                 break;
@@ -301,14 +332,13 @@ class Intel8080 {
                 const b = this.flags.cy ? 1 : 0;
                 res = this.registers.a - val - b;
                 this.flags.cy = res < 0;
-                // Low-level addition logic: A + ~val + ~b. ~b is 1 if b=0, and 0 if b=1.
                 this.flags.ac = ((this.registers.a & 0x0F) + ((~val) & 0x0F) + (b ? 0 : 1)) > 0x0F;
                 this.registers.a = res & 0xFF;
                 break;
             case 4: // ANA
                 res = this.registers.a & val;
                 this.flags.cy = false;
-                this.flags.ac = ((this.registers.a | val) & 0x08) !== 0; // 8080 logic
+                this.flags.ac = ((this.registers.a | val) & 0x08) !== 0;
                 this.registers.a = res;
                 break;
             case 5: // XRA
