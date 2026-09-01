@@ -17,6 +17,12 @@ function updateUI() {
     document.getElementById('reg-sp').textContent = cpu.registers.sp.toString(16).toUpperCase().padStart(4, '0');
     document.getElementById('reg-f').textContent = cpu.getFlagByte().toString(16).toUpperCase().padStart(2, '0');
 
+    // FPU Registers (Si los elementos existen en la vista HTML)
+    const fp0Elem = document.getElementById('reg-fp0');
+    const fp1Elem = document.getElementById('reg-fp1');
+    if (fp0Elem && cpu.fpu) fp0Elem.textContent = cpu.fpu.fp0;
+    if (fp1Elem && cpu.fpu) fp1Elem.textContent = cpu.fpu.fp1;
+
     // Flags
     document.getElementById('flag-s').textContent = cpu.flags.s ? '1' : '0';
     document.getElementById('flag-z').textContent = cpu.flags.z ? '1' : '0';
