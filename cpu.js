@@ -119,6 +119,17 @@ class Intel8080 {
         return (high << 8) | low;
     }
 
+    // Parsea los siguientes 4 bytes de memoria como un número flotante IEEE 754 de 32 bits
+    fetchFloat32() {
+        const buffer = new ArrayBuffer(4);
+        const bytes = new Uint8Array(buffer);
+        bytes[0] = this.fetch();
+        bytes[1] = this.fetch();
+        bytes[2] = this.fetch();
+        bytes[3] = this.fetch();
+        return new Float32Array(buffer)[0];
+    }
+
     push(val) {
         this.registers.sp = (this.registers.sp - 1) & 0xFFFF;
         this.writeMemory(this.registers.sp, (val >> 8) & 0xFF);
@@ -292,11 +303,11 @@ class Intel8080 {
             case 0x03: // FMUL (fp0 = fp0 * fp1)
                 this.registers.fp0 = this.registers.fp0 * this.registers.fp1;
                 break;
-            case 0x04: // FLD0 <byte_val> (Carga entero en fp0)
-                this.registers.fp0 = this.fetch();
+            case 0x04: // FLD0 <float_val> (Carga valor en fp0)
+                this.registers.fp0 = this.fetchFloat32();
                 break;
-            case 0x05: // FLD1 <byte_val> (Carga entero en fp1)
-                this.registers.fp1 = this.fetch();
+            case 0x05: // FLD1 <float_val> (Carga valor en fp1)
+                this.registers.fp1 = this.fetchFloat32();
                 break;
             case 0x06: // FSWAP (Intercambia fp0 y fp1)
                 const temp = this.registers.fp0;
