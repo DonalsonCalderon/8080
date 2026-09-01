@@ -181,7 +181,23 @@ button:disabled {
 }
 
 .reg-box.extended {
-    flex: 2;
+    flex: 1;
+}
+
+/* Estilos específicos para los registros flotantes (FPU) */
+.reg-box.fpu-reg {
+    border-color: #cbd5e1;
+    background-color: #f1f5f9;
+}
+
+.reg-box.fpu-reg span {
+    background-color: #e2e8f0;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.reg-box.fpu-reg div {
+    color: #1d4ed8;
 }
 
 .memory {
