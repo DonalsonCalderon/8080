@@ -15,7 +15,6 @@ class Intel8080 {
             l: 0,
             sp: 0xFFFF,
             pc: 0,
-            // Registros del Coprocesador de Punto Flotante (FPU)
             fp0: 0.0,
             fp1: 0.0
         };
@@ -119,7 +118,6 @@ class Intel8080 {
         return (high << 8) | low;
     }
 
-    // Parsea los siguientes 4 bytes de memoria como un número flotante IEEE 754 de 32 bits
     fetchFloat32() {
         const buffer = new ArrayBuffer(4);
         const bytes = new Uint8Array(buffer);
@@ -280,8 +278,8 @@ class Intel8080 {
             case 0x3F: this.flags.cy = !this.flags.cy; break; // CMC
 
             // Special
-            case 0xDB: this.fetch(); break; // IN (Ignored for now)
-            case 0xD3: this.fetch(); break; // OUT (Ignored for now)
+            case 0xDB: this.fetch(); break; // IN
+            case 0xD3: this.fetch(); break; // OUT
             case 0xFB: break; // EI
             case 0xF3: break; // DI
 
@@ -303,13 +301,13 @@ class Intel8080 {
             case 0x03: // FMUL (fp0 = fp0 * fp1)
                 this.registers.fp0 = this.registers.fp0 * this.registers.fp1;
                 break;
-            case 0x04: // FLD0 <float_val> (Carga valor en fp0)
+            case 0x04: // FLD0 <float_val>
                 this.registers.fp0 = this.fetchFloat32();
                 break;
-            case 0x05: // FLD1 <float_val> (Carga valor en fp1)
+            case 0x05: // FLD1 <float_val>
                 this.registers.fp1 = this.fetchFloat32();
                 break;
-            case 0x06: // FSWAP (Intercambia fp0 y fp1)
+            case 0x06: // FSWAP
                 const temp = this.registers.fp0;
                 this.registers.fp0 = this.registers.fp1;
                 this.registers.fp1 = temp;
@@ -423,6 +421,7 @@ class Intel8080 {
             case 5: return this.registers.l;
             case 6: return this.readMemory(this.getRP('hl'));
             case 7: return this.registers.a;
+            default: return 0;
         }
     }
 
