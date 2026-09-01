@@ -19,10 +19,9 @@
             <h2>Assembler</h2>
             <textarea id="code-editor" spellcheck="false" placeholder="Write your 8080 assembly here...
 Example:
-MVI A, 5
-MVI B, 10
-ADD B
-STA 2000H
+FLD0 15
+FLD1 25
+FADD
 HLT"></textarea>
             <div class="controls">
                 <button id="btn-assemble">Assemble & Load</button>
@@ -63,6 +62,11 @@ HLT"></textarea>
                     <div class="reg-row">
                         <div class="reg-box extended"><span>PC</span><div id="reg-pc">0000</div></div>
                         <div class="reg-box extended"><span>SP</span><div id="reg-sp">FFFF</div></div>
+                    </div>
+                    <!-- Registros del Coprocesador FPU -->
+                    <div class="reg-row">
+                        <div class="reg-box extended" style="background-color: #f1f5f9;"><span>FP0</span><div id="reg-fp0">0</div></div>
+                        <div class="reg-box extended" style="background-color: #f1f5f9;"><span>FP1</span><div id="reg-fp1">0</div></div>
                     </div>
                 </div>
 
