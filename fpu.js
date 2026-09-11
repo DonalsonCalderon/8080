@@ -4,41 +4,57 @@ class FloatingPointUnit {
     }
 
     reset() {
-        // Four 32-bit floating-point registers
         this.registers = {
-            f0: 0,
-            f1: 0,
-            f2: 0,
-            f3: 0
+            f0: 0.0,
+            f1: 0.0,
+            f2: 0.0,
+            f3: 0.0
         };
 
-        // FPU status flags
+        // Compatibilidad con la versión anterior del proyecto
+        Object.defineProperties(this, {
+            fp0: {
+                get: () => this.registers.f0,
+                set: value => {
+                    this.registers.f0 = Math.fround(value);
+                }
+            },
+            fp1: {
+                get: () => this.registers.f1,
+                set: value => {
+                    this.registers.f1 = Math.fround(value);
+                }
+            },
+            fp2: {
+                get: () => this.registers.f2,
+                set: value => {
+                    this.registers.f2 = Math.fround(value);
+                }
+            },
+            fp3: {
+                get: () => this.registers.f3,
+                set: value => {
+                    this.registers.f3 = Math.fround(value);
+                }
+            }
+        });
+
         this.flags = {
             zero: false,
             negative: false,
             overflow: false,
             underflow: false,
-            divideByZero: false
+            divideByZero: false,
+            invalid: false
         };
 
-        // Statistics
         this.stats = {
             operations: 0,
             cycles: 0
         };
 
         this.lastOperation = 'NONE';
-        this.lastResult = 0;
-    }
-
-    getRegister(index) {
-        const name = this.registerName(index);
-        return this.registers[name];
-    }
-
-    setRegister(index, value) {
-        const name = this.registerName(index);
-        this.registers[name] = Math.fround(value);
+        this.lastResult = 0.0;
     }
 
     registerName(index) {
@@ -48,13 +64,23 @@ class FloatingPointUnit {
             if (['f0', 'f1', 'f2', 'f3'].includes(normalized)) {
                 return normalized;
             }
+
+            throw new Error(`Invalid FPU register: ${index}`);
         }
 
-        if (index >= 0 && index <= 3) {
+        if (Number.isInteger(index) && index >= 0 && index <= 3) {
             return `f${index}`;
         }
 
         throw new Error(`Invalid FPU register: ${index}`);
+    }
+
+    getRegister(index) {
+        return this.registers[this.registerName(index)];
+    }
+
+    setRegister(index, value) {
+        this.registers[this.registerName(index)] = Math.fround(value);
     }
 
     clearFlags() {
@@ -63,19 +89,20 @@ class FloatingPointUnit {
         this.flags.overflow = false;
         this.flags.underflow = false;
         this.flags.divideByZero = false;
+        this.flags.invalid = false;
     }
 
     updateFlags(value) {
-        this.flags.zero = (value === 0);
-        this.flags.negative = (value < 0);
+        this.flags.zero = value === 0;
+        this.flags.negative = value < 0;
 
-        this.flags.overflow = !Number.isFinite(value) && !Number.isNaN(value);
+        this.flags.overflow =
+            value === Infinity || value === -Infinity;
+
         this.flags.underflow =
             value !== 0 &&
             Number.isFinite(value) &&
             Math.abs(value) < 1.17549435e-38;
-
-        this.flags.divideByZero = false;
     }
 
     recordOperation(name, cycles) {
@@ -118,7 +145,7 @@ class FloatingPointUnit {
         return result;
     }
 
-    fadd(destination, source) {
+    fadd(destination = 'f0', source = 'f1') {
         return this.binaryOperation(
             destination,
             source,
@@ -128,7 +155,7 @@ class FloatingPointUnit {
         );
     }
 
-    fsub(destination, source) {
+    fsub(destination = 'f0', source = 'f1') {
         return this.binaryOperation(
             destination,
             source,
@@ -138,7 +165,7 @@ class FloatingPointUnit {
         );
     }
 
-    fmul(destination, source) {
+    fmul(destination = 'f0', source = 'f1') {
         return this.binaryOperation(
             destination,
             source,
@@ -148,7 +175,7 @@ class FloatingPointUnit {
         );
     }
 
-    fdiv(destination, source) {
+    fdiv(destination = 'f0', source = 'f1') {
         this.clearFlags();
 
         const a = this.getRegister(destination);
@@ -156,9 +183,11 @@ class FloatingPointUnit {
 
         if (b === 0) {
             this.flags.divideByZero = true;
+
             this.recordOperation('FDIV', 30);
-            this.lastResult = 0;
-            return 0;
+            this.lastResult = 0.0;
+
+            return 0.0;
         }
 
         const result = Math.fround(a / b);
@@ -167,21 +196,22 @@ class FloatingPointUnit {
         this.updateFlags(result);
 
         this.recordOperation('FDIV', 30);
-
         this.lastResult = result;
 
         return result;
     }
 
-    fsqrt(destination) {
+    fsqrt(destination = 'f0') {
         this.clearFlags();
 
         const value = this.getRegister(destination);
 
         if (value < 0) {
-            this.flags.overflow = true;
+            this.flags.invalid = true;
+
             this.recordOperation('FSQRT', 35);
             this.lastResult = NaN;
+
             return NaN;
         }
 
@@ -191,13 +221,12 @@ class FloatingPointUnit {
         this.updateFlags(result);
 
         this.recordOperation('FSQRT', 35);
-
         this.lastResult = result;
 
         return result;
     }
 
-    fcmp(left, right) {
+    fcmp(left = 'f0', right = 'f1') {
         this.clearFlags();
 
         const a = this.getRegister(left);
@@ -205,14 +234,31 @@ class FloatingPointUnit {
 
         const difference = a - b;
 
-        this.flags.zero = (difference === 0);
-        this.flags.negative = (difference < 0);
+        this.flags.zero = difference === 0;
+        this.flags.negative = difference < 0;
 
         this.recordOperation('FCMP', 18);
 
         this.lastResult = difference;
 
         return difference;
+    }
+
+    fswap() {
+        this.clearFlags();
+
+        const temp = this.getRegister('f0');
+
+        this.setRegister('f0', this.getRegister('f1'));
+        this.setRegister('f1', temp);
+
+        this.updateFlags(this.getRegister('f0'));
+
+        this.recordOperation('FSWAP', 10);
+
+        this.lastResult = this.getRegister('f0');
+
+        return this.lastResult;
     }
 
     binaryOperation(destination, source, operation, name, cycles) {
@@ -258,7 +304,8 @@ class FloatingPointUnit {
             `N=${this.flags.negative ? 1 : 0}`,
             `OV=${this.flags.overflow ? 1 : 0}`,
             `UN=${this.flags.underflow ? 1 : 0}`,
-            `DZ=${this.flags.divideByZero ? 1 : 0}`
+            `DZ=${this.flags.divideByZero ? 1 : 0}`,
+            `INV=${this.flags.invalid ? 1 : 0}`
         ].join(' ');
     }
 
@@ -271,7 +318,6 @@ class FloatingPointUnit {
         };
     }
 }
-
 
 if (typeof module !== 'undefined') {
     module.exports = FloatingPointUnit;
