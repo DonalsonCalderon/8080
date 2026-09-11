@@ -1,324 +1,464 @@
-class FloatingPointUnit {
-    constructor() {
-        this.reset();
-    }
+// fpu.js
+// Conceptual IEEE-754 Floating Point Coprocessor
+// for the Intel 8080 Emulator
 
-    reset() {
+class FloatingPointUnit {
+
+    constructor() {
+
         this.registers = {
-            f0: 0.0,
-            f1: 0.0,
-            f2: 0.0,
-            f3: 0.0
+            f0: 0,
+            f1: 0,
+            f2: 0,
+            f3: 0
         };
 
-        // Compatibilidad con la versión anterior del proyecto
+        // Compatibility aliases used by the CPU and tests.
         Object.defineProperties(this, {
+
             fp0: {
                 get: () => this.registers.f0,
                 set: value => {
-                    this.registers.f0 = Math.fround(value);
+                    this.registers.f0 = Number(value);
                 }
             },
+
             fp1: {
                 get: () => this.registers.f1,
                 set: value => {
-                    this.registers.f1 = Math.fround(value);
+                    this.registers.f1 = Number(value);
                 }
             },
+
             fp2: {
                 get: () => this.registers.f2,
                 set: value => {
-                    this.registers.f2 = Math.fround(value);
+                    this.registers.f2 = Number(value);
                 }
             },
+
             fp3: {
                 get: () => this.registers.f3,
                 set: value => {
-                    this.registers.f3 = Math.fround(value);
+                    this.registers.f3 = Number(value);
                 }
             }
+
         });
 
         this.flags = {
-            zero: false,
-            negative: false,
-            overflow: false,
-            underflow: false,
-            divideByZero: false,
-            invalid: false
+            z: false,
+            n: false,
+            ov: false,
+            un: false,
+            dz: false
         };
 
         this.stats = {
             operations: 0,
-            cycles: 0
+            cycles: 0,
+            lastOperation: "None",
+            lastResult: 0
         };
 
-        this.lastOperation = 'NONE';
-        this.lastResult = 0.0;
+        this.reset();
     }
 
-    registerName(index) {
-        if (typeof index === 'string') {
-            const normalized = index.toLowerCase();
 
-            if (['f0', 'f1', 'f2', 'f3'].includes(normalized)) {
-                return normalized;
-            }
+    // ==========================================
+    // RESET
+    // ==========================================
 
-            throw new Error(`Invalid FPU register: ${index}`);
-        }
+    reset() {
 
-        if (Number.isInteger(index) && index >= 0 && index <= 3) {
-            return `f${index}`;
-        }
+        this.registers.f0 = 0;
+        this.registers.f1 = 0;
+        this.registers.f2 = 0;
+        this.registers.f3 = 0;
 
-        throw new Error(`Invalid FPU register: ${index}`);
+        this.flags.z = false;
+        this.flags.n = false;
+        this.flags.ov = false;
+        this.flags.un = false;
+        this.flags.dz = false;
+
+        this.stats.operations = 0;
+        this.stats.cycles = 0;
+        this.stats.lastOperation = "None";
+        this.stats.lastResult = 0;
     }
 
-    getRegister(index) {
-        return this.registers[this.registerName(index)];
-    }
 
-    setRegister(index, value) {
-        this.registers[this.registerName(index)] = Math.fround(value);
-    }
-
-    clearFlags() {
-        this.flags.zero = false;
-        this.flags.negative = false;
-        this.flags.overflow = false;
-        this.flags.underflow = false;
-        this.flags.divideByZero = false;
-        this.flags.invalid = false;
-    }
+    // ==========================================
+    // FLAG UPDATE
+    // ==========================================
 
     updateFlags(value) {
-        this.flags.zero = value === 0;
-        this.flags.negative = value < 0;
 
-        this.flags.overflow =
-            value === Infinity || value === -Infinity;
+        this.flags.z =
+            value === 0;
 
-        this.flags.underflow =
-            value !== 0 &&
-            Number.isFinite(value) &&
-            Math.abs(value) < 1.17549435e-38;
+        this.flags.n =
+            value < 0;
+
+        this.flags.un =
+            Number.isNaN(value);
+
+        this.flags.ov =
+            !Number.isFinite(value) &&
+            !Number.isNaN(value);
     }
 
-    recordOperation(name, cycles) {
-        this.lastOperation = name;
+
+    // ==========================================
+    // STATISTICS
+    // ==========================================
+
+    recordOperation(
+        operation,
+        result,
+        cycles = 12
+    ) {
+
         this.stats.operations++;
+
         this.stats.cycles += cycles;
+
+        this.stats.lastOperation =
+            operation;
+
+        this.stats.lastResult =
+            result;
     }
 
-    fload(index, value) {
-        this.clearFlags();
 
-        const number = Number(value);
+    // ==========================================
+    // FADD
+    // ==========================================
 
-        if (!Number.isFinite(number)) {
-            throw new Error(`Invalid floating-point value: ${value}`);
+    fadd() {
+
+        const result =
+            this.fp0 + this.fp1;
+
+        this.fp0 = result;
+
+        this.updateFlags(result);
+
+        this.recordOperation(
+            "FADD",
+            result,
+            12
+        );
+
+        return result;
+    }
+
+
+    // ==========================================
+    // FSUB
+    // ==========================================
+
+    fsub() {
+
+        const result =
+            this.fp0 - this.fp1;
+
+        this.fp0 = result;
+
+        this.updateFlags(result);
+
+        this.recordOperation(
+            "FSUB",
+            result,
+            12
+        );
+
+        return result;
+    }
+
+
+    // ==========================================
+    // FMUL
+    // ==========================================
+
+    fmul() {
+
+        const result =
+            this.fp0 * this.fp1;
+
+        this.fp0 = result;
+
+        this.updateFlags(result);
+
+        this.recordOperation(
+            "FMUL",
+            result,
+            16
+        );
+
+        return result;
+    }
+
+
+    // ==========================================
+    // FDIV
+    // ==========================================
+
+    fdiv() {
+
+        if (this.fp1 === 0) {
+
+            this.flags.dz = true;
+
+            this.recordOperation(
+                "FDIV",
+                Infinity,
+                20
+            );
+
+            return Infinity;
         }
 
-        this.setRegister(index, number);
+        const result =
+            this.fp0 / this.fp1;
 
-        const result = this.getRegister(index);
-
-        this.updateFlags(result);
-        this.recordOperation('FLOAD', 8);
-
-        this.lastResult = result;
-
-        return result;
-    }
-
-    fstore(index) {
-        this.clearFlags();
-
-        const result = this.getRegister(index);
+        this.fp0 = result;
 
         this.updateFlags(result);
-        this.recordOperation('FSTORE', 8);
 
-        this.lastResult = result;
-
-        return result;
-    }
-
-    fadd(destination = 'f0', source = 'f1') {
-        return this.binaryOperation(
-            destination,
-            source,
-            (a, b) => a + b,
-            'FADD',
+        this.recordOperation(
+            "FDIV",
+            result,
             20
         );
+
+        return result;
     }
 
-    fsub(destination = 'f0', source = 'f1') {
-        return this.binaryOperation(
-            destination,
-            source,
-            (a, b) => a - b,
-            'FSUB',
+
+    // ==========================================
+    // FSQRT
+    // ==========================================
+
+    fsqrt() {
+
+        const result =
+            Math.sqrt(this.fp0);
+
+        this.fp0 = result;
+
+        this.updateFlags(result);
+
+        this.recordOperation(
+            "FSQRT",
+            result,
             20
         );
+
+        return result;
     }
 
-    fmul(destination = 'f0', source = 'f1') {
-        return this.binaryOperation(
-            destination,
-            source,
-            (a, b) => a * b,
-            'FMUL',
-            25
+
+    // ==========================================
+    // FCMP
+    // ==========================================
+
+    fcmp() {
+
+        const result =
+            this.fp0 - this.fp1;
+
+        this.flags.z =
+            result === 0;
+
+        this.flags.n =
+            result < 0;
+
+        this.flags.ov =
+            !Number.isFinite(result);
+
+        this.recordOperation(
+            "FCMP",
+            result,
+            8
         );
-    }
-
-    fdiv(destination = 'f0', source = 'f1') {
-        this.clearFlags();
-
-        const a = this.getRegister(destination);
-        const b = this.getRegister(source);
-
-        if (b === 0) {
-            this.flags.divideByZero = true;
-
-            this.recordOperation('FDIV', 30);
-            this.lastResult = 0.0;
-
-            return 0.0;
-        }
-
-        const result = Math.fround(a / b);
-
-        this.setRegister(destination, result);
-        this.updateFlags(result);
-
-        this.recordOperation('FDIV', 30);
-        this.lastResult = result;
 
         return result;
     }
 
-    fsqrt(destination = 'f0') {
-        this.clearFlags();
 
-        const value = this.getRegister(destination);
-
-        if (value < 0) {
-            this.flags.invalid = true;
-
-            this.recordOperation('FSQRT', 35);
-            this.lastResult = NaN;
-
-            return NaN;
-        }
-
-        const result = Math.fround(Math.sqrt(value));
-
-        this.setRegister(destination, result);
-        this.updateFlags(result);
-
-        this.recordOperation('FSQRT', 35);
-        this.lastResult = result;
-
-        return result;
-    }
-
-    fcmp(left = 'f0', right = 'f1') {
-        this.clearFlags();
-
-        const a = this.getRegister(left);
-        const b = this.getRegister(right);
-
-        const difference = a - b;
-
-        this.flags.zero = difference === 0;
-        this.flags.negative = difference < 0;
-
-        this.recordOperation('FCMP', 18);
-
-        this.lastResult = difference;
-
-        return difference;
-    }
+    // ==========================================
+    // FSWAP
+    // ==========================================
 
     fswap() {
-        this.clearFlags();
 
-        const temp = this.getRegister('f0');
+        const temp =
+            this.fp0;
 
-        this.setRegister('f0', this.getRegister('f1'));
-        this.setRegister('f1', temp);
+        this.fp0 =
+            this.fp1;
 
-        this.updateFlags(this.getRegister('f0'));
+        this.fp1 =
+            temp;
 
-        this.recordOperation('FSWAP', 10);
+        this.recordOperation(
+            "FSWAP",
+            this.fp0,
+            8
+        );
 
-        this.lastResult = this.getRegister('f0');
-
-        return this.lastResult;
+        return this.fp0;
     }
 
-    binaryOperation(destination, source, operation, name, cycles) {
-        this.clearFlags();
 
-        const a = this.getRegister(destination);
-        const b = this.getRegister(source);
+    // ==========================================
+    // FLOAT LOAD
+    // ==========================================
 
-        const result = Math.fround(operation(a, b));
+    fload(register, value) {
 
-        this.setRegister(destination, result);
-        this.updateFlags(result);
+        if (!["f0", "f1", "f2", "f3"].includes(register)) {
 
-        this.recordOperation(name, cycles);
+            throw new Error(
+                `Invalid FPU register: ${register}`
+            );
 
-        this.lastResult = result;
+        }
 
-        return result;
+        this.registers[register] =
+            Number(value);
+
+        this.recordOperation(
+            "FLD",
+            Number(value),
+            8
+        );
+
+        return this.registers[register];
     }
 
-    getRegisterBits(index) {
-        const value = this.getRegister(index);
 
-        const buffer = new ArrayBuffer(4);
-        const view = new DataView(buffer);
+    // ==========================================
+    // FLOAT STORE
+    // ==========================================
 
-        view.setFloat32(0, value, false);
+    fstore(register) {
 
-        return view.getUint32(0, false) >>> 0;
+        if (!["f0", "f1", "f2", "f3"].includes(register)) {
+
+            throw new Error(
+                `Invalid FPU register: ${register}`
+            );
+
+        }
+
+        const value =
+            this.registers[register];
+
+        this.recordOperation(
+            "FST",
+            value,
+            8
+        );
+
+        return value;
     }
 
-    getRegisterHex(index) {
-        return this
-            .getRegisterBits(index)
-            .toString(16)
-            .toUpperCase()
-            .padStart(8, '0');
+
+    // ==========================================
+    // IEEE-754
+    // ==========================================
+
+    toIEEE754(value) {
+
+        const buffer =
+            new ArrayBuffer(4);
+
+        const view =
+            new DataView(buffer);
+
+        view.setFloat32(
+            0,
+            Number(value),
+            true
+        );
+
+        return view.getUint32(
+            0,
+            true
+        );
     }
 
-    getFlagsString() {
-        return [
-            `Z=${this.flags.zero ? 1 : 0}`,
-            `N=${this.flags.negative ? 1 : 0}`,
-            `OV=${this.flags.overflow ? 1 : 0}`,
-            `UN=${this.flags.underflow ? 1 : 0}`,
-            `DZ=${this.flags.divideByZero ? 1 : 0}`,
-            `INV=${this.flags.invalid ? 1 : 0}`
-        ].join(' ');
+
+    fromIEEE754(bits) {
+
+        const buffer =
+            new ArrayBuffer(4);
+
+        const view =
+            new DataView(buffer);
+
+        view.setUint32(
+            0,
+            bits >>> 0,
+            true
+        );
+
+        return view.getFloat32(
+            0,
+            true
+        );
     }
+
+
+    // ==========================================
+    // STATS
+    // ==========================================
 
     getStats() {
+
         return {
-            operations: this.stats.operations,
-            cycles: this.stats.cycles,
-            lastOperation: this.lastOperation,
-            lastResult: this.lastResult
+            operations:
+                this.stats.operations,
+
+            cycles:
+                this.stats.cycles,
+
+            lastOperation:
+                this.stats.lastOperation,
+
+            lastResult:
+                this.stats.lastResult
         };
     }
+
 }
 
-if (typeof module !== 'undefined') {
-    module.exports = FloatingPointUnit;
+
+// ==========================================
+// NODE.JS EXPORT
+// ==========================================
+
+if (
+    typeof module !== "undefined" &&
+    module.exports
+) {
+
+    module.exports =
+        FloatingPointUnit;
+}
+
+
+// ==========================================
+// BROWSER GLOBAL
+// ==========================================
+
+if (
+    typeof window !== "undefined"
+) {
+
+    window.FloatingPointUnit =
+        FloatingPointUnit;
 }
