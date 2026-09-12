@@ -721,12 +721,17 @@ class Intel8080 {
             return;
         }
 
-        // JMP
-        if (opcode === 0xC3) {
+        // JNZ - Jump if Not Zero
+if (opcode === 0xC2) {
 
-            this.registers.pc =
-                this.fetch16();
+    const addr = this.fetch16();
 
+    if (!this.flags.z) {
+        this.registers.pc = addr;
+    }
+
+    return;
+}
             return;
         }
 
