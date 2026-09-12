@@ -15,7 +15,9 @@ class Intel8080 {
         this.memory = new Uint8Array(65536);
 
         if (!FloatingPointUnitClass) {
-            throw new Error('FPU class not found. Make sure fpu.js is loaded before cpu.js.');
+            throw new Error(
+                'FPU class not found. Make sure fpu.js is loaded before cpu.js.'
+            );
         }
 
         this.fpu = new FloatingPointUnitClass();
@@ -65,15 +67,20 @@ class Intel8080 {
     }
 
     getRP(rp) {
+
         switch (rp) {
+
             case 'bc':
-                return (this.registers.b << 8) | this.registers.c;
+                return (this.registers.b << 8) |
+                       this.registers.c;
 
             case 'de':
-                return (this.registers.d << 8) | this.registers.e;
+                return (this.registers.d << 8) |
+                       this.registers.e;
 
             case 'hl':
-                return (this.registers.h << 8) | this.registers.l;
+                return (this.registers.h << 8) |
+                       this.registers.l;
 
             case 'sp':
                 return this.registers.sp;
@@ -90,18 +97,27 @@ class Intel8080 {
         switch (rp) {
 
             case 'bc':
-                this.registers.b = (value >> 8) & 0xFF;
-                this.registers.c = value & 0xFF;
+                this.registers.b =
+                    (value >> 8) & 0xFF;
+
+                this.registers.c =
+                    value & 0xFF;
                 break;
 
             case 'de':
-                this.registers.d = (value >> 8) & 0xFF;
-                this.registers.e = value & 0xFF;
+                this.registers.d =
+                    (value >> 8) & 0xFF;
+
+                this.registers.e =
+                    value & 0xFF;
                 break;
 
             case 'hl':
-                this.registers.h = (value >> 8) & 0xFF;
-                this.registers.l = value & 0xFF;
+                this.registers.h =
+                    (value >> 8) & 0xFF;
+
+                this.registers.l =
+                    value & 0xFF;
                 break;
 
             case 'sp':
@@ -114,31 +130,59 @@ class Intel8080 {
 
         let res = 0x02;
 
-        if (this.flags.s) res |= 0x80;
-        if (this.flags.z) res |= 0x40;
-        if (this.flags.ac) res |= 0x10;
-        if (this.flags.p) res |= 0x04;
-        if (this.flags.cy) res |= 0x01;
+        if (this.flags.s) {
+            res |= 0x80;
+        }
+
+        if (this.flags.z) {
+            res |= 0x40;
+        }
+
+        if (this.flags.ac) {
+            res |= 0x10;
+        }
+
+        if (this.flags.p) {
+            res |= 0x04;
+        }
+
+        if (this.flags.cy) {
+            res |= 0x01;
+        }
 
         return res;
     }
 
     setFlagByte(val) {
 
-        this.flags.s = (val & 0x80) !== 0;
-        this.flags.z = (val & 0x40) !== 0;
-        this.flags.ac = (val & 0x10) !== 0;
-        this.flags.p = (val & 0x04) !== 0;
-        this.flags.cy = (val & 0x01) !== 0;
+        this.flags.s =
+            (val & 0x80) !== 0;
+
+        this.flags.z =
+            (val & 0x40) !== 0;
+
+        this.flags.ac =
+            (val & 0x10) !== 0;
+
+        this.flags.p =
+            (val & 0x04) !== 0;
+
+        this.flags.cy =
+            (val & 0x01) !== 0;
     }
 
     updateFlags(val, setAC = false, acVal = 0) {
 
         val &= 0xFF;
 
-        this.flags.z = val === 0;
-        this.flags.s = (val & 0x80) !== 0;
-        this.flags.p = this.checkParity(val);
+        this.flags.z =
+            val === 0;
+
+        this.flags.s =
+            (val & 0x80) !== 0;
+
+        this.flags.p =
+            this.checkParity(val);
 
         if (setAC) {
             this.flags.ac = acVal;
@@ -150,6 +194,7 @@ class Intel8080 {
         let count = 0;
 
         for (let i = 0; i < 8; i++) {
+
             if (val & (1 << i)) {
                 count++;
             }
@@ -159,16 +204,25 @@ class Intel8080 {
     }
 
     readMemory(addr) {
-        return this.memory[addr & 0xFFFF];
+
+        return this.memory[
+            addr & 0xFFFF
+        ];
     }
 
     writeMemory(addr, val) {
-        this.memory[addr & 0xFFFF] = val & 0xFF;
+
+        this.memory[
+            addr & 0xFFFF
+        ] = val & 0xFF;
     }
 
     fetch() {
 
-        const byte = this.readMemory(this.registers.pc);
+        const byte =
+            this.readMemory(
+                this.registers.pc
+            );
 
         this.registers.pc =
             (this.registers.pc + 1) & 0xFFFF;
@@ -208,13 +262,17 @@ class Intel8080 {
     pop() {
 
         const low =
-            this.readMemory(this.registers.sp);
+            this.readMemory(
+                this.registers.sp
+            );
 
         this.registers.sp =
             (this.registers.sp + 1) & 0xFFFF;
 
         const high =
-            this.readMemory(this.registers.sp);
+            this.readMemory(
+                this.registers.sp
+            );
 
         this.registers.sp =
             (this.registers.sp + 1) & 0xFFFF;
@@ -226,14 +284,31 @@ class Intel8080 {
 
         switch (code) {
 
-            case 0: return this.registers.b;
-            case 1: return this.registers.c;
-            case 2: return this.registers.d;
-            case 3: return this.registers.e;
-            case 4: return this.registers.h;
-            case 5: return this.registers.l;
-            case 6: return this.readMemory(this.getRP('hl'));
-            case 7: return this.registers.a;
+            case 0:
+                return this.registers.b;
+
+            case 1:
+                return this.registers.c;
+
+            case 2:
+                return this.registers.d;
+
+            case 3:
+                return this.registers.e;
+
+            case 4:
+                return this.registers.h;
+
+            case 5:
+                return this.registers.l;
+
+            case 6:
+                return this.readMemory(
+                    this.getRP('hl')
+                );
+
+            case 7:
+                return this.registers.a;
 
             default:
                 return 0;
@@ -246,14 +321,40 @@ class Intel8080 {
 
         switch (code) {
 
-            case 0: this.registers.b = val; break;
-            case 1: this.registers.c = val; break;
-            case 2: this.registers.d = val; break;
-            case 3: this.registers.e = val; break;
-            case 4: this.registers.h = val; break;
-            case 5: this.registers.l = val; break;
-            case 6: this.writeMemory(this.getRP('hl'), val); break;
-            case 7: this.registers.a = val; break;
+            case 0:
+                this.registers.b = val;
+                break;
+
+            case 1:
+                this.registers.c = val;
+                break;
+
+            case 2:
+                this.registers.d = val;
+                break;
+
+            case 3:
+                this.registers.e = val;
+                break;
+
+            case 4:
+                this.registers.h = val;
+                break;
+
+            case 5:
+                this.registers.l = val;
+                break;
+
+            case 6:
+                this.writeMemory(
+                    this.getRP('hl'),
+                    val
+                );
+                break;
+
+            case 7:
+                this.registers.a = val;
+                break;
         }
     }
 
@@ -272,8 +373,10 @@ class Intel8080 {
                     res > 0xFF;
 
                 this.flags.ac =
-                    ((this.registers.a & 0x0F) +
-                    (val & 0x0F)) > 0x0F;
+                    (
+                        (this.registers.a & 0x0F) +
+                        (val & 0x0F)
+                    ) > 0x0F;
 
                 this.registers.a =
                     res & 0xFF;
@@ -294,9 +397,11 @@ class Intel8080 {
                     res > 0xFF;
 
                 this.flags.ac =
-                    ((this.registers.a & 0x0F) +
-                    (val & 0x0F) +
-                    carry) > 0x0F;
+                    (
+                        (this.registers.a & 0x0F) +
+                        (val & 0x0F) +
+                        carry
+                    ) > 0x0F;
 
                 this.registers.a =
                     res & 0xFF;
@@ -312,9 +417,11 @@ class Intel8080 {
                     res < 0;
 
                 this.flags.ac =
-                    ((this.registers.a & 0x0F) +
-                    ((~val) & 0x0F) +
-                    1) > 0x0F;
+                    (
+                        (this.registers.a & 0x0F) +
+                        ((~val) & 0x0F) +
+                        1
+                    ) > 0x0F;
 
                 this.registers.a =
                     res & 0xFF;
@@ -335,9 +442,11 @@ class Intel8080 {
                     res < 0;
 
                 this.flags.ac =
-                    ((this.registers.a & 0x0F) +
-                    ((~val) & 0x0F) +
-                    (borrow ? 0 : 1)) > 0x0F;
+                    (
+                        (this.registers.a & 0x0F) +
+                        ((~val) & 0x0F) +
+                        (borrow ? 0 : 1)
+                    ) > 0x0F;
 
                 this.registers.a =
                     res & 0xFF;
@@ -391,16 +500,20 @@ class Intel8080 {
                     res < 0;
 
                 this.flags.ac =
-                    ((this.registers.a & 0x0F) +
-                    ((~val) & 0x0F) +
-                    1) > 0x0F;
+                    (
+                        (this.registers.a & 0x0F) +
+                        ((~val) & 0x0F) +
+                        1
+                    ) > 0x0F;
 
                 this.updateFlags(res);
 
                 return;
         }
 
-        this.updateFlags(this.registers.a);
+        this.updateFlags(
+            this.registers.a
+        );
     }
 
     execute(opcode) {
@@ -412,7 +525,9 @@ class Intel8080 {
 
         // HLT
         if (opcode === 0x76) {
+
             this.halted = true;
+
             return;
         }
 
@@ -495,7 +610,8 @@ class Intel8080 {
             this.flags.ac =
                 ((old & 0x0F) + 1) > 0x0F;
 
-            this.registers.a = result;
+            this.registers.a =
+                result;
 
             this.updateFlags(
                 result,
@@ -516,11 +632,14 @@ class Intel8080 {
                 (old - 1) & 0xFF;
 
             this.flags.ac =
-                ((old & 0x0F) +
-                ((~1) & 0x0F) +
-                1) > 0x0F;
+                (
+                    (old & 0x0F) +
+                    ((~1) & 0x0F) +
+                    1
+                ) > 0x0F;
 
-            this.registers.a = result;
+            this.registers.a =
+                result;
 
             this.updateFlags(
                 result,
@@ -578,6 +697,30 @@ class Intel8080 {
             return;
         }
 
+        // CPI - Compare Immediate
+        if (opcode === 0xFE) {
+
+            const value =
+                this.fetch();
+
+            const result =
+                this.registers.a - value;
+
+            this.flags.cy =
+                result < 0;
+
+            this.flags.ac =
+                (
+                    (this.registers.a & 0x0F) +
+                    ((~value) & 0x0F) +
+                    1
+                ) > 0x0F;
+
+            this.updateFlags(result);
+
+            return;
+        }
+
         // JMP
         if (opcode === 0xC3) {
 
@@ -613,25 +756,31 @@ class Intel8080 {
 
         // PUSH BC
         if (opcode === 0xC5) {
+
             this.push(
                 this.getRP('bc')
             );
+
             return;
         }
 
         // PUSH DE
         if (opcode === 0xD5) {
+
             this.push(
                 this.getRP('de')
             );
+
             return;
         }
 
         // PUSH HL
         if (opcode === 0xE5) {
+
             this.push(
                 this.getRP('hl')
             );
+
             return;
         }
 
@@ -702,8 +851,10 @@ class Intel8080 {
                 (this.registers.a >> 7) & 1;
 
             this.registers.a =
-                ((this.registers.a << 1) |
-                carry) & 0xFF;
+                (
+                    (this.registers.a << 1) |
+                    carry
+                ) & 0xFF;
 
             this.flags.cy =
                 !!carry;
@@ -718,8 +869,10 @@ class Intel8080 {
                 this.registers.a & 1;
 
             this.registers.a =
-                ((this.registers.a >> 1) |
-                (carry << 7)) & 0xFF;
+                (
+                    (this.registers.a >> 1) |
+                    (carry << 7)
+                ) & 0xFF;
 
             this.flags.cy =
                 !!carry;
@@ -734,11 +887,15 @@ class Intel8080 {
                 this.flags.cy ? 1 : 0;
 
             this.flags.cy =
-                !!((this.registers.a >> 7) & 1);
+                !!(
+                    (this.registers.a >> 7) & 1
+                );
 
             this.registers.a =
-                ((this.registers.a << 1) |
-                carry) & 0xFF;
+                (
+                    (this.registers.a << 1) |
+                    carry
+                ) & 0xFF;
 
             return;
         }
@@ -753,8 +910,10 @@ class Intel8080 {
                 !!(this.registers.a & 1);
 
             this.registers.a =
-                ((this.registers.a >> 1) |
-                (carry << 7)) & 0xFF;
+                (
+                    (this.registers.a >> 1) |
+                    (carry << 7)
+                ) & 0xFF;
 
             return;
         }
@@ -787,6 +946,7 @@ class Intel8080 {
                 result > 0x99 ||
                 this.flags.cy
             ) {
+
                 correction |= 0x60;
                 this.flags.cy = true;
             }
@@ -794,8 +954,10 @@ class Intel8080 {
             result += correction;
 
             this.flags.ac =
-                ((this.registers.a & 0x0F) +
-                (correction & 0x0F)) > 0x0F;
+                (
+                    (this.registers.a & 0x0F) +
+                    (correction & 0x0F)
+                ) > 0x0F;
 
             this.registers.a =
                 result & 0xFF;
@@ -809,35 +971,52 @@ class Intel8080 {
 
         // STC
         if (opcode === 0x37) {
+
             this.flags.cy = true;
+
             return;
         }
 
         // CMC
         if (opcode === 0x3F) {
-            this.flags.cy = !this.flags.cy;
+
+            this.flags.cy =
+                !this.flags.cy;
+
             return;
         }
 
         // IN
         if (opcode === 0xDB) {
+
             this.fetch();
+
             return;
         }
 
         // OUT
         if (opcode === 0xD3) {
+
             this.fetch();
+
             return;
         }
 
         // EI / DI
-        if (opcode === 0xFB || opcode === 0xF3) {
+        if (
+            opcode === 0xFB ||
+            opcode === 0xF3
+        ) {
             return;
         }
 
         throw new Error(
-            `Unsupported opcode: ${opcode.toString(16).toUpperCase().padStart(2, '0')}`
+            `Unsupported opcode: ${
+                opcode
+                    .toString(16)
+                    .toUpperCase()
+                    .padStart(2, '0')
+            }`
         );
     }
 
@@ -849,15 +1028,21 @@ class Intel8080 {
         switch (operation) {
 
             case 0x01: // FADD
+
                 this.fpu.fadd();
+
                 break;
 
             case 0x02: // FSUB
+
                 this.fpu.fsub();
+
                 break;
 
             case 0x03: // FMUL
+
                 this.fpu.fmul();
+
                 break;
 
             case 0x04: { // FLD0
@@ -903,7 +1088,12 @@ class Intel8080 {
             default:
 
                 throw new Error(
-                    `Unsupported FPU opcode: ED ${operation.toString(16).toUpperCase().padStart(2, '0')}`
+                    `Unsupported FPU opcode: ED ${
+                        operation
+                            .toString(16)
+                            .toUpperCase()
+                            .padStart(2, '0')
+                    }`
                 );
         }
     }
