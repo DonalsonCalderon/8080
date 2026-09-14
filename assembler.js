@@ -85,6 +85,7 @@ class Assembler8080 {
             'FSUB': { bytes: 2 },
             'FMUL': { bytes: 2 },
             'FDIV': { bytes: 2 },
+            'FSQRT': { bytes: 2 },
             'FLD0': { bytes: 6 },
             'FLD1': { bytes: 6 },
             'FSWAP': { bytes: 2 }
@@ -168,13 +169,14 @@ class Assembler8080 {
         const r2 = tokens[2] ? tokens[2].toUpperCase() : null;
 
         // Decodificación FPU
-        if (['FADD', 'FSUB', 'FMUL', 'FDIV', 'FLD0', 'FLD1', 'FSWAP'].includes(mnemonic)) {
+      if (['FADD', 'FSUB', 'FMUL', 'FSQRT', 'FDIV', 'FLD0', 'FLD1', 'FSWAP'].includes(mnemonic)) {
             bytes.push(0xED); // Prefijo FPU
             switch (mnemonic) {
-                case 'FADD':  bytes.push(0x01); break;
-                case 'FSUB':  bytes.push(0x02); break;
-                case 'FMUL':  bytes.push(0x03); break;
-                case 'FDIV':  bytes.push(0x07); break;
+                  case 'FADD':  bytes.push(0x01); break;
+                    case 'FSUB':  bytes.push(0x02); break;
+                    case 'FMUL':  bytes.push(0x03); break;
+                    case 'FSQRT': bytes.push(0x08); break;
+                    case 'FDIV':  bytes.push(0x07); break;
                 case 'FLD0':
                 case 'FLD1': {
                     bytes.push(mnemonic === 'FLD0' ? 0x04 : 0x05);
