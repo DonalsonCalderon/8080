@@ -1113,6 +1113,33 @@ if (opcode === 0xC3) {
                 case 0x08: // FSQRT
                 this.fpu.fsqrt();
                 break;
+                
+                case 0x09:
+                    this.fpu.fcmp();
+                    break;
+                
+                case 0x0A: {
+                    const registerCode = this.fetch();
+                
+                    const registers = [
+                        'f0',
+                        'f1',
+                        'f2',
+                        'f3'
+                    ];
+                
+                    if (registerCode > 3) {
+                        throw new Error(
+                            `Registro FPU inválido: ${registerCode}`
+                        );
+                    }
+                
+                    this.fpu.fstore(
+                        registers[registerCode]
+                    );
+                
+                    break;
+                }
 
             case 0x04: { // FLD0
 
