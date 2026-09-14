@@ -1101,6 +1101,10 @@ if (opcode === 0xC3) {
 
                 break;
 
+                case 0x07:
+                this.fpu.fdiv();
+                break;
+
             case 0x04: { // FLD0
 
                 const bits =
