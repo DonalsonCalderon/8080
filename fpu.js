@@ -1,11 +1,5 @@
-// fpu.js
-// Conceptual IEEE-754 Floating Point Coprocessor
-// for the Intel 8080 Emulator
-
 class FloatingPointUnit {
-
     constructor() {
-
         this.registers = {
             f0: 0,
             f1: 0,
@@ -13,9 +7,7 @@ class FloatingPointUnit {
             f3: 0
         };
 
-        // Compatibility aliases used by the CPU and tests.
         Object.defineProperties(this, {
-
             fp0: {
                 get: () => this.registers.f0,
                 set: value => {
@@ -43,7 +35,6 @@ class FloatingPointUnit {
                     this.registers.f3 = Number(value);
                 }
             }
-
         });
 
         this.flags = {
@@ -64,13 +55,7 @@ class FloatingPointUnit {
         this.reset();
     }
 
-
-    // ==========================================
-    // RESET
-    // ==========================================
-
     reset() {
-
         this.registers.f0 = 0;
         this.registers.f1 = 0;
         this.registers.f2 = 0;
@@ -88,73 +73,55 @@ class FloatingPointUnit {
         this.stats.lastResult = 0;
     }
 
-// ==========================================
-// FLOAT32
-// ==========================================
+    // =========================================================
+    // CONVERSIÓN A IEEE-754 FLOAT32
+    // =========================================================
 
-toFloat32(value) {
+    toFloat32(value) {
+        const buffer = new ArrayBuffer(4);
+        const view = new DataView(buffer);
 
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
+        view.setFloat32(0, Number(value), true);
 
-    view.setFloat32(0, Number(value), true);
+        return view.getFloat32(0, true);
+    }
 
-    return view.getFloat32(0, true);
-}
-    
-
-
-    // ==========================================
-    // FLAG UPDATE
-    // ==========================================
+    // =========================================================
+    // ACTUALIZAR FLAGS
+    // =========================================================
 
     updateFlags(value) {
-
         this.flags.z =
             value === 0;
 
         this.flags.n =
             value < 0;
 
-        this.flags.un =
-            Number.isNaN(value);
+        // UN se controla directamente en las operaciones
+        // que pueden producir underflow.
 
         this.flags.ov =
             !Number.isFinite(value) &&
             !Number.isNaN(value);
     }
 
+    // =========================================================
+    // REGISTRAR OPERACIÓN
+    // =========================================================
 
-    // ==========================================
-    // STATISTICS
-    // ==========================================
-
-    recordOperation(
-        operation,
-        result,
-        cycles = 12
-    ) {
-
+    recordOperation(operation, result, cycles = 12) {
         this.stats.operations++;
-
         this.stats.cycles += cycles;
-
-        this.stats.lastOperation =
-            operation;
-
-        this.stats.lastResult =
-            result;
+        this.stats.lastOperation = operation;
+        this.stats.lastResult = result;
     }
 
-
-    // ==========================================
+    // =========================================================
     // FADD
-    // ==========================================
+    // =========================================================
 
     fadd() {
-
-        const result =
-            this.fp0 + this.fp1;
+        const result = this.fp0 + this.fp1;
 
         this.fp0 = result;
 
@@ -169,15 +136,12 @@ toFloat32(value) {
         return result;
     }
 
-
-    // ==========================================
+    // =========================================================
     // FSUB
-    // ==========================================
+    // =========================================================
 
     fsub() {
-
-        const result =
-            this.fp0 - this.fp1;
+        const result = this.fp0 - this.fp1;
 
         this.fp0 = result;
 
@@ -192,45 +156,50 @@ toFloat32(value) {
         return result;
     }
 
-
-    // ==========================================
+    // =========================================================
     // FMUL
-    // ==========================================
+    // =========================================================
 
-   fmul() {
+    fmul() {
+        // Primero se calcula usando JavaScript Number
+        // y luego se fuerza el resultado a IEEE-754 FLOAT32.
 
-    const rawResult =
-        this.fp0 * this.fp1;
+        const rawResult =
+            this.fp0 * this.fp1;
 
-    const result =
-        this.toFloat32(rawResult);
+        const result =
+            this.toFloat32(rawResult);
 
-    if (rawResult !== 0 && result === 0) {
-        this.flags.un = true;
+        // Detección de underflow:
+        // el resultado real era distinto de cero,
+        // pero al convertirlo a FLOAT32 terminó en cero.
+
+        if (
+            rawResult !== 0 &&
+            result === 0
+        ) {
+            this.flags.un = true;
+        }
+
+        this.fp0 = result;
+
+        this.updateFlags(result);
+
+        this.recordOperation(
+            "FMUL",
+            result,
+            16
+        );
+
+        return result;
     }
 
-    this.fp0 = result;
-
-    this.updateFlags(result);
-
-    this.recordOperation(
-        "FMUL",
-        result,
-        16
-    );
-
-    return result;
-}
-
-
-    // ==========================================
+    // =========================================================
     // FDIV
-    // ==========================================
+    // =========================================================
 
     fdiv() {
-
         if (this.fp1 === 0) {
-
             this.flags.dz = true;
 
             this.recordOperation(
@@ -258,13 +227,11 @@ toFloat32(value) {
         return result;
     }
 
-
-    // ==========================================
+    // =========================================================
     // FSQRT
-    // ==========================================
+    // =========================================================
 
     fsqrt() {
-
         const result =
             Math.sqrt(this.fp0);
 
@@ -275,19 +242,17 @@ toFloat32(value) {
         this.recordOperation(
             "FSQRT",
             result,
-            20
+            16
         );
 
         return result;
     }
 
-
-    // ==========================================
+    // =========================================================
     // FCMP
-    // ==========================================
+    // =========================================================
 
     fcmp() {
-
         const result =
             this.fp0 - this.fp1;
 
@@ -298,103 +263,92 @@ toFloat32(value) {
             result < 0;
 
         this.flags.ov =
-            !Number.isFinite(result);
+            !Number.isFinite(result) &&
+            !Number.isNaN(result);
 
         this.recordOperation(
             "FCMP",
             result,
-            8
+            12
         );
 
         return result;
     }
 
-
-    // ==========================================
+    // =========================================================
     // FSWAP
-    // ==========================================
+    // =========================================================
 
     fswap() {
+        const temp = this.fp0;
 
-        const temp =
-            this.fp0;
-
-        this.fp0 =
-            this.fp1;
-
-        this.fp1 =
-            temp;
+        this.fp0 = this.fp1;
+        this.fp1 = temp;
 
         this.recordOperation(
             "FSWAP",
             this.fp0,
-            8
+            4
         );
 
         return this.fp0;
     }
 
-
-    // ==========================================
-    // FLOAT LOAD
-    // ==========================================
+    // =========================================================
+    // FLOAD
+    // =========================================================
 
     fload(register, value) {
-
-        if (!["f0", "f1", "f2", "f3"].includes(register)) {
-
+        if (
+            !["f0", "f1", "f2", "f3"].includes(register)
+        ) {
             throw new Error(
-                `Invalid FPU register: ${register}`
+                `Registro FPU inválido: ${register}`
             );
-
         }
 
         this.registers[register] =
             Number(value);
 
         this.recordOperation(
-            "FLD",
-            Number(value),
-            8
+            "FLOAD",
+            this.registers[register],
+            4
         );
 
         return this.registers[register];
     }
 
-
-    // ==========================================
-    // FLOAT STORE
-    // ==========================================
+    // =========================================================
+    // FSTORE
+    // =========================================================
 
     fstore(register) {
-
-        if (!["f0", "f1", "f2", "f3"].includes(register)) {
-
+        if (
+            !["f0", "f1", "f2", "f3"].includes(register)
+        ) {
             throw new Error(
-                `Invalid FPU register: ${register}`
+                `Registro FPU inválido: ${register}`
             );
-
         }
 
         const value =
             this.registers[register];
 
         this.recordOperation(
-            "FST",
+            "FSTORE",
             value,
-            8
+            4
         );
 
         return value;
     }
 
-
-    // ==========================================
-    // IEEE-754
-    // ==========================================
+    // =========================================================
+    // CONVERTIR A IEEE-754
+    // =========================================================
 
     toIEEE754(value) {
-
         const buffer =
             new ArrayBuffer(4);
 
@@ -413,9 +367,11 @@ toFloat32(value) {
         );
     }
 
+    // =========================================================
+    // CONVERTIR DESDE IEEE-754
+    // =========================================================
 
     fromIEEE754(bits) {
-
         const buffer =
             new ArrayBuffer(4);
 
@@ -434,13 +390,11 @@ toFloat32(value) {
         );
     }
 
-
-    // ==========================================
-    // STATS
-    // ==========================================
+    // =========================================================
+    // ESTADÍSTICAS
+    // =========================================================
 
     getStats() {
-
         return {
             operations:
                 this.stats.operations,
@@ -455,32 +409,28 @@ toFloat32(value) {
                 this.stats.lastResult
         };
     }
-
 }
 
 
-// ==========================================
-// NODE.JS EXPORT
-// ==========================================
+// =============================================================
+// EXPORTAR PARA NODE.JS
+// =============================================================
 
 if (
     typeof module !== "undefined" &&
     module.exports
 ) {
-
-    module.exports =
-        FloatingPointUnit;
+    module.exports = FloatingPointUnit;
 }
 
 
-// ==========================================
-// BROWSER GLOBAL
-// ==========================================
+// =============================================================
+// EXPORTAR PARA NAVEGADOR
+// =============================================================
 
 if (
     typeof window !== "undefined"
 ) {
-
     window.FloatingPointUnit =
         FloatingPointUnit;
 }
