@@ -176,9 +176,16 @@ class Assembler8080 {
                 };
             }
 
+                       console.log(
+                "DEBUG mnemonic:",
+                JSON.stringify(mnemonic),
+                "FLD opcode:",
+                this.opcodes['FLD']
+            );
+            
             const info =
                 this.opcodes[mnemonic];
-
+            
             if (!info) {
                 throw new Error(
                     `Unknown mnemonic: ${mnemonic}`
