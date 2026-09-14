@@ -290,21 +290,21 @@ class Assembler8080 {
         // =========================
         // FPU
         // =========================
-        if (
-            [
-                'FADD',
-                'FSUB',
-                'FMUL',
-                'FSQRT',
-                'FDIV',
-                'FCMP',
-                'FSTORE',
-                'FLD',
-                'FLD0',
-                'FLD1',
-                'FSWAP'
-            ].includes(mnemonic)
-        ) {
+                    if (
+                [
+                    'FADD',
+                    'FSUB',
+                    'FMUL',
+                    'FSQRT',
+                    'FDIV',
+                    'FCMP',
+                    'FSTORE',
+                    'FLD',
+                    'FLD0',
+                    'FLD1',
+                    'FSWAP'
+                ].includes(mnemonic)
+            ) {
 
             // Prefijo FPU
             bytes.push(0xED);
