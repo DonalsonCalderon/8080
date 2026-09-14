@@ -197,23 +197,26 @@ toFloat32(value) {
     // FMUL
     // ==========================================
 
-    fmul() {
+   fmul() {
 
-        const result =
-            this.fp0 * this.fp1;
+    const rawResult =
+        this.fp0 * this.fp1;
 
-        this.fp0 = result;
+    const result =
+        this.toFloat32(rawResult);
 
-        this.updateFlags(result);
+    this.fp0 = result;
 
-        this.recordOperation(
-            "FMUL",
-            result,
-            16
-        );
+    this.updateFlags(result);
 
-        return result;
-    }
+    this.recordOperation(
+        "FMUL",
+        result,
+        16
+    );
+
+    return result;
+}
 
 
     // ==========================================
