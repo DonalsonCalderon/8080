@@ -1114,11 +1114,13 @@ if (opcode === 0xC3) {
                 this.fpu.fsqrt();
                 break;
                 
-                case 0x09:
+                case 0x09: //FCMP
                     this.fpu.fcmp();
                     break;
                 
+           
                 case 0x0A: {
+                    // Leer registro FPU
                     const registerCode = this.fetch();
                 
                     const registers = [
@@ -1134,12 +1136,35 @@ if (opcode === 0xC3) {
                         );
                     }
                 
-                    this.fpu.fstore(
-                        registers[registerCode]
-                    );
+                    // Leer dirección de memoria
+                    const address = this.fetch16();
+                
+                    // Obtener valor del registro FPU
+                    const value =
+                        this.fpu.fstore(
+                            registers[registerCode]
+                        );
+                
+                    // Convertir el valor a IEEE-754 float32
+                    const bits =
+                        this.fpu.toIEEE754(value);
+                
+                    // Guardar los 4 bytes en memoria
+                    this.memory[address] =
+                        bits & 0xFF;
+                
+                    this.memory[(address + 1) & 0xFFFF] =
+                        (bits >> 8) & 0xFF;
+                
+                    this.memory[(address + 2) & 0xFFFF] =
+                        (bits >> 16) & 0xFF;
+                
+                    this.memory[(address + 3) & 0xFFFF] =
+                        (bits >> 24) & 0xFF;
                 
                     break;
                 }
+                
 
             case 0x04: { // FLD0
 
