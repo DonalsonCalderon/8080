@@ -61,16 +61,17 @@ class Assembler8080 {
             // =========================
             // FPU
             // =========================
-            'FADD': { bytes: 2 },
-            'FSUB': { bytes: 2 },
-            'FMUL': { bytes: 2 },
-            'FDIV': { bytes: 2 },
-            'FSQRT': { bytes: 2 },
-            'FCMP': { bytes: 2 },
-            'FSTORE': { bytes: 5 },
-            'FLD0': { bytes: 6 },
-            'FLD1': { bytes: 6 },
-            'FSWAP': { bytes: 2 }
+       'FADD': { bytes: 2 },
+        'FSUB': { bytes: 2 },
+        'FMUL': { bytes: 2 },
+        'FDIV': { bytes: 2 },
+        'FSQRT': { bytes: 2 },
+        'FCMP': { bytes: 2 },
+        'FSTORE': { bytes: 5 },
+        'FLD': { bytes: 5 },
+        'FLD0': { bytes: 6 },
+        'FLD1': { bytes: 6 },
+        'FSWAP': { bytes: 2 }
         };
 
         this.regs = {
@@ -278,16 +279,18 @@ class Assembler8080 {
         // FPU
         // =========================
         if ([
-            'FADD',
-            'FSUB',
-            'FMUL',
-            'FSQRT',
-            'FDIV',
-            'FCMP',
-            'FSTORE',
-            'FLD0',
-            'FLD1',
-            'FSWAP'
+               'FADD',
+                'FSUB',
+                'FMUL',
+                'FSQRT',
+                'FDIV',
+                'FCMP',
+                'FSTORE',
+                'FLD',
+                'FLD0',
+                'FLD1',
+                'FSWAP'
+            ]
         ].includes(mnemonic)) {
 
             // Prefijo FPU
@@ -364,6 +367,49 @@ class Assembler8080 {
                 
                     break;
                 }
+
+                    //FLD
+                    case 'FLD': {
+                            bytes.push(0x0B);
+                        
+                            const register =
+                                tokens[1]
+                                    ? tokens[1].toUpperCase()
+                                    : null;
+                        
+                            const registerCodes = {
+                                'FP0': 0x00,
+                                'FP1': 0x01,
+                                'FP2': 0x02,
+                                'FP3': 0x03
+                            };
+                        
+                            if (
+                                !register ||
+                                registerCodes[register] === undefined
+                            ) {
+                                throw new Error(
+                                    `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
+                                );
+                            }
+                        
+                            bytes.push(
+                                registerCodes[register]
+                            );
+                        
+                            const address =
+                                this.parseValue(
+                                    tokens[2],
+                                    labels
+                                );
+                        
+                            bytes.push(
+                                address & 0xFF,
+                                (address >> 8) & 0xFF
+                            );
+                        
+                            break;
+                        }
                 
 
 
