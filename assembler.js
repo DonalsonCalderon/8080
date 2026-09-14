@@ -67,7 +67,7 @@ class Assembler8080 {
             'FDIV': { bytes: 2 },
             'FSQRT': { bytes: 2 },
             'FCMP': { bytes: 2 },
-            'FSTORE': { bytes: 3 },
+            'FSTORE': { bytes: 5 },
             'FLD0': { bytes: 6 },
             'FLD1': { bytes: 6 },
             'FSWAP': { bytes: 2 }
@@ -319,37 +319,53 @@ class Assembler8080 {
                     bytes.push(0x09);
                     break;
 
+             
                 case 'FSTORE': {
                     bytes.push(0x0A);
-
+                
                     const register =
                         tokens[1]
                             ? tokens[1].toUpperCase()
                             : null;
-
+                
                     const registerCodes = {
                         'FP0': 0x00,
                         'FP1': 0x01,
                         'FP2': 0x02,
                         'FP3': 0x03
                     };
-
+                
                     if (
                         !register ||
                         registerCodes[register] === undefined
                     ) {
                         throw new Error(
-                            `Registro FPU inválido: ${register}. ` +
-                            `Use FP0, FP1, FP2 o FP3.`
+                            `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
                         );
                     }
-
+                
+                    // Código del registro FPU
                     bytes.push(
                         registerCodes[register]
                     );
-
+                
+                    // Dirección de memoria
+                    const address =
+                        this.parseValue(
+                            tokens[2],
+                            labels
+                        );
+                
+                    // Dirección de 16 bits en little-endian
+                    bytes.push(
+                        address & 0xFF,
+                        (address >> 8) & 0xFF
+                    );
+                
                     break;
                 }
+                
+
 
                 case 'FLD0':
                 case 'FLD1': {
