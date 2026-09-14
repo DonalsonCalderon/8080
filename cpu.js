@@ -761,7 +761,7 @@ if (opcode === 0xDA) {
     return;
 }
 
-         console.log("JC DETECTADO:", opcode.toString(16).toUpperCase());
+console.log("JNC DETECTADO:", opcode.toString(16).toUpperCase());
         // JNC - Jump if No Carry
 if (opcode === 0xD2) {
 
