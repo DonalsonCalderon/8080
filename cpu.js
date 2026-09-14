@@ -1106,8 +1106,12 @@ if (opcode === 0xC3) {
 
                 break;
 
-                case 0x07:
+                case 0x07: //DIV
                 this.fpu.fdiv();
+                break;
+
+                case 0x08: // FSQRT
+                this.fpu.fsqrt();
                 break;
 
             case 0x04: { // FLD0
