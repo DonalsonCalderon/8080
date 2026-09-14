@@ -88,6 +88,21 @@ class FloatingPointUnit {
         this.stats.lastResult = 0;
     }
 
+// ==========================================
+// FLOAT32
+// ==========================================
+
+toFloat32(value) {
+
+    const buffer = new ArrayBuffer(4);
+    const view = new DataView(buffer);
+
+    view.setFloat32(0, Number(value), true);
+
+    return view.getFloat32(0, true);
+}
+    
+
 
     // ==========================================
     // FLAG UPDATE
