@@ -748,6 +748,7 @@ if (opcode === 0xCA) {
     return;
 }
 
+        console.log("JC DETECTADO:", opcode.toString(16).toUpperCase());
         // JC - Jump if Carry
 if (opcode === 0xDA) {
 
