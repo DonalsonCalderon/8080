@@ -115,6 +115,9 @@ class Assembler8080 {
             const tokens = line.split(/[\s,]+/).filter(t => t);
             const mnemonic = tokens[0].toUpperCase();
 
+            /////////
+            console.log("Assembler mnemonic:", mnemonic);
+
             if (mnemonic === 'ORG') {
                 currentPC = this.parseValue(tokens[1]);
                 if (label) labels[label] = currentPC;
