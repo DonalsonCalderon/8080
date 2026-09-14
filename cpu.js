@@ -1081,6 +1081,11 @@ if (opcode === 0xC3) {
         const operation =
             this.fetch();
 
+        console.log(
+        "FPU OPCODE EJECUTADO:",
+        operation.toString(16).toUpperCase().padStart(2, '0')
+    );
+
         switch (operation) {
 
             case 0x01: // FADD
