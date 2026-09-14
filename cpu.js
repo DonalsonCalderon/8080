@@ -748,6 +748,20 @@ if (opcode === 0xCA) {
     return;
 }
 
+        // JC - Jump if Carry
+if (opcode === 0xDA) {
+
+    const addr = this.fetch16();
+
+    if (this.flags.cy) {
+        this.registers.pc = addr;
+    }
+
+    return;
+}
+
+        
+
 // JMP
 if (opcode === 0xC3) {
 
