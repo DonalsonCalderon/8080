@@ -1164,7 +1164,48 @@ if (opcode === 0xC3) {
                 
                     break;
                 }
+
                 
+                    case 0x0B: { // FLD desde memoria
+                        // Leer registro FPU
+                        const registerCode = this.fetch();
+                    
+                        const registers = [
+                            'f0',
+                            'f1',
+                            'f2',
+                            'f3'
+                        ];
+                    
+                        if (registerCode > 3) {
+                            throw new Error(
+                                `Registro FPU inválido: ${registerCode}`
+                            );
+                        }
+                    
+                        // Leer dirección de memoria
+                        const address = this.fetch16();
+                    
+                        // Leer los 4 bytes IEEE-754 desde memoria
+                        const bits =
+                            this.memory[address] |
+                            (this.memory[(address + 1) & 0xFFFF] << 8) |
+                            (this.memory[(address + 2) & 0xFFFF] << 16) |
+                            (this.memory[(address + 3) & 0xFFFF] << 24);
+                    
+                        // Convertir IEEE-754 a número JavaScript
+                        const value =
+                            this.fpu.fromIEEE754(bits);
+                    
+                        // Cargar en el registro FPU
+                        this.fpu.fload(
+                            registers[registerCode],
+                            value
+                        );
+                    
+                        break;
+                    }
+                    
 
             case 0x04: { // FLD0
 
