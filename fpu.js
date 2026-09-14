@@ -205,6 +205,10 @@ toFloat32(value) {
     const result =
         this.toFloat32(rawResult);
 
+    if (rawResult !== 0 && result === 0) {
+        this.flags.un = true;
+    }
+
     this.fp0 = result;
 
     this.updateFlags(result);
