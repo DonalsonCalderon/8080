@@ -748,13 +748,26 @@ if (opcode === 0xCA) {
     return;
 }
 
-        console.log("JC DETECTADO:", opcode.toString(16).toUpperCase());
+       
         // JC - Jump if Carry
 if (opcode === 0xDA) {
 
     const addr = this.fetch16();
 
     if (this.flags.cy) {
+        this.registers.pc = addr;
+    }
+
+    return;
+}
+
+         console.log("JC DETECTADO:", opcode.toString(16).toUpperCase());
+        // JNC - Jump if No Carry
+if (opcode === 0xD2) {
+
+    const addr = this.fetch16();
+
+    if (!this.flags.cy) {
         this.registers.pc = addr;
     }
 
