@@ -1,8 +1,9 @@
-
 class Assembler8080 {
     constructor() {
         this.opcodes = {
+            // =========================
             // 8080
+            // =========================
             'NOP': { code: 0x00, bytes: 1 },
             'LXI': { code: 0x01, bytes: 3 },
             'STAX': { code: 0x02, bytes: 1 },
@@ -61,17 +62,17 @@ class Assembler8080 {
             // =========================
             // FPU
             // =========================
-       'FADD': { bytes: 2 },
-        'FSUB': { bytes: 2 },
-        'FMUL': { bytes: 2 },
-        'FDIV': { bytes: 2 },
-        'FSQRT': { bytes: 2 },
-        'FCMP': { bytes: 2 },
-        'FSTORE': { bytes: 5 },
-        'FLD': { bytes: 5 },
-        'FLD0': { bytes: 6 },
-        'FLD1': { bytes: 6 },
-        'FSWAP': { bytes: 2 }
+            'FADD': { bytes: 2 },
+            'FSUB': { bytes: 2 },
+            'FMUL': { bytes: 2 },
+            'FDIV': { bytes: 2 },
+            'FSQRT': { bytes: 2 },
+            'FCMP': { bytes: 2 },
+            'FSTORE': { bytes: 5 },
+            'FLD': { bytes: 5 },
+            'FLD0': { bytes: 6 },
+            'FLD1': { bytes: 6 },
+            'FSWAP': { bytes: 2 }
         };
 
         this.regs = {
@@ -144,7 +145,9 @@ class Assembler8080 {
                 mnemonic
             );
 
+            // =========================
             // ORG
+            // =========================
             if (mnemonic === 'ORG') {
                 currentPC =
                     this.parseValue(tokens[1]);
@@ -161,7 +164,9 @@ class Assembler8080 {
                 };
             }
 
+            // =========================
             // DB
+            // =========================
             if (mnemonic === 'DB') {
                 const pc = currentPC;
 
@@ -176,16 +181,12 @@ class Assembler8080 {
                 };
             }
 
-                       console.log(
-                "DEBUG mnemonic:",
-                JSON.stringify(mnemonic),
-                "FLD opcode:",
-                this.opcodes['FLD']
-            );
-            
+            // =========================
+            // BUSCAR OPCODE
+            // =========================
             const info =
                 this.opcodes[mnemonic];
-            
+
             if (!info) {
                 throw new Error(
                     `Unknown mnemonic: ${mnemonic}`
@@ -220,7 +221,9 @@ class Assembler8080 {
 
             let pc = line.pc;
 
+            // =========================
             // DB
+            // =========================
             if (line.type === 'data') {
                 for (
                     let i = 1;
@@ -235,7 +238,9 @@ class Assembler8080 {
                 }
             }
 
+            // =========================
             // INSTRUCCIÓN
+            // =========================
             else {
                 const bytes =
                     this.generateOpcode(
@@ -285,8 +290,9 @@ class Assembler8080 {
         // =========================
         // FPU
         // =========================
-        if ([
-               'FADD',
+        if (
+            [
+                'FADD',
                 'FSUB',
                 'FMUL',
                 'FSQRT',
@@ -297,54 +303,75 @@ class Assembler8080 {
                 'FLD0',
                 'FLD1',
                 'FSWAP'
-            ]
-        ].includes(mnemonic)) {
+            ].includes(mnemonic)
+        ) {
 
             // Prefijo FPU
             bytes.push(0xED);
 
             switch (mnemonic) {
 
+                // =========================
+                // FADD
+                // =========================
                 case 'FADD':
                     bytes.push(0x01);
                     break;
 
+                // =========================
+                // FSUB
+                // =========================
                 case 'FSUB':
                     bytes.push(0x02);
                     break;
 
+                // =========================
+                // FMUL
+                // =========================
                 case 'FMUL':
                     bytes.push(0x03);
                     break;
 
+                // =========================
+                // FDIV
+                // =========================
                 case 'FDIV':
                     bytes.push(0x07);
                     break;
 
+                // =========================
+                // FSQRT
+                // =========================
                 case 'FSQRT':
                     bytes.push(0x08);
                     break;
 
+                // =========================
+                // FCMP
+                // =========================
                 case 'FCMP':
                     bytes.push(0x09);
                     break;
 
-             
+                // =========================
+                // FSTORE
+                // =========================
                 case 'FSTORE': {
+
                     bytes.push(0x0A);
-                
+
                     const register =
                         tokens[1]
                             ? tokens[1].toUpperCase()
                             : null;
-                
+
                     const registerCodes = {
                         'FP0': 0x00,
                         'FP1': 0x01,
                         'FP2': 0x02,
                         'FP3': 0x03
                     };
-                
+
                     if (
                         !register ||
                         registerCodes[register] === undefined
@@ -353,75 +380,86 @@ class Assembler8080 {
                             `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
                         );
                     }
-                
+
                     // Código del registro FPU
                     bytes.push(
                         registerCodes[register]
                     );
-                
+
                     // Dirección de memoria
                     const address =
                         this.parseValue(
                             tokens[2],
                             labels
                         );
-                
-                    // Dirección de 16 bits en little-endian
+
+                    // Dirección de 16 bits
+                    // little-endian
                     bytes.push(
                         address & 0xFF,
                         (address >> 8) & 0xFF
                     );
-                
+
                     break;
                 }
 
-                    //FLD
-                    case 'FLD': {
-                            bytes.push(0x0B);
-                        
-                            const register =
-                                tokens[1]
-                                    ? tokens[1].toUpperCase()
-                                    : null;
-                        
-                            const registerCodes = {
-                                'FP0': 0x00,
-                                'FP1': 0x01,
-                                'FP2': 0x02,
-                                'FP3': 0x03
-                            };
-                        
-                            if (
-                                !register ||
-                                registerCodes[register] === undefined
-                            ) {
-                                throw new Error(
-                                    `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
-                                );
-                            }
-                        
-                            bytes.push(
-                                registerCodes[register]
-                            );
-                        
-                            const address =
-                                this.parseValue(
-                                    tokens[2],
-                                    labels
-                                );
-                        
-                            bytes.push(
-                                address & 0xFF,
-                                (address >> 8) & 0xFF
-                            );
-                        
-                            break;
-                        }
-                
+                // =========================
+                // FLD
+                // Cargar desde memoria
+                // =========================
+                case 'FLD': {
 
+                    bytes.push(0x0B);
 
+                    const register =
+                        tokens[1]
+                            ? tokens[1].toUpperCase()
+                            : null;
+
+                    const registerCodes = {
+                        'FP0': 0x00,
+                        'FP1': 0x01,
+                        'FP2': 0x02,
+                        'FP3': 0x03
+                    };
+
+                    if (
+                        !register ||
+                        registerCodes[register] === undefined
+                    ) {
+                        throw new Error(
+                            `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
+                        );
+                    }
+
+                    // Código del registro FPU
+                    bytes.push(
+                        registerCodes[register]
+                    );
+
+                    // Dirección de memoria
+                    const address =
+                        this.parseValue(
+                            tokens[2],
+                            labels
+                        );
+
+                    // Dirección de 16 bits
+                    // little-endian
+                    bytes.push(
+                        address & 0xFF,
+                        (address >> 8) & 0xFF
+                    );
+
+                    break;
+                }
+
+                // =========================
+                // FLD0 / FLD1
+                // =========================
                 case 'FLD0':
                 case 'FLD1': {
+
                     bytes.push(
                         mnemonic === 'FLD0'
                             ? 0x04
@@ -434,8 +472,10 @@ class Assembler8080 {
                             labels
                         );
 
+                    // =========================
                     // Convertir a IEEE-754
                     // single precision
+                    // =========================
                     const buffer =
                         new ArrayBuffer(4);
 
@@ -461,6 +501,9 @@ class Assembler8080 {
                     break;
                 }
 
+                // =========================
+                // FSWAP
+                // =========================
                 case 'FSWAP':
                     bytes.push(0x06);
                     break;
@@ -480,7 +523,9 @@ class Assembler8080 {
         let byte2 = 0;
         let byte3 = 0;
 
+        // =========================
         // MOV
+        // =========================
         if (mnemonic === 'MOV') {
 
             if (
@@ -516,7 +561,9 @@ class Assembler8080 {
             bytes.push(byte1);
         }
 
+        // =========================
         // MVI
+        // =========================
         else if (mnemonic === 'MVI') {
 
             if (
@@ -543,7 +590,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // LXI
+        // =========================
         else if (mnemonic === 'LXI') {
 
             if (
@@ -577,7 +626,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // ALU
+        // =========================
         else if (
             [
                 'ADD',
@@ -617,7 +668,9 @@ class Assembler8080 {
             bytes.push(byte1);
         }
 
+        // =========================
         // INR
+        // =========================
         else if (mnemonic === 'INR') {
 
             if (
@@ -634,7 +687,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // DCR
+        // =========================
         else if (mnemonic === 'DCR') {
 
             if (
@@ -651,7 +706,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // INX
+        // =========================
         else if (mnemonic === 'INX') {
 
             if (
@@ -668,7 +725,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // DCX
+        // =========================
         else if (mnemonic === 'DCX') {
 
             if (
@@ -685,7 +744,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // DAD
+        // =========================
         else if (mnemonic === 'DAD') {
 
             if (
@@ -702,7 +763,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // PUSH
+        // =========================
         else if (mnemonic === 'PUSH') {
 
             if (
@@ -719,7 +782,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // POP
+        // =========================
         else if (mnemonic === 'POP') {
 
             if (
@@ -736,7 +801,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // STAX
+        // =========================
         else if (mnemonic === 'STAX') {
 
             if (
@@ -753,7 +820,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // LDAX
+        // =========================
         else if (mnemonic === 'LDAX') {
 
             if (
@@ -770,7 +839,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // RST
+        // =========================
         else if (mnemonic === 'RST') {
 
             const val =
@@ -795,7 +866,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // Instrucción de 3 bytes
+        // =========================
         else if (
             line.info.bytes === 3
         ) {
@@ -813,7 +886,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // Instrucción de 2 bytes
+        // =========================
         else if (
             line.info.bytes === 2
         ) {
@@ -827,7 +902,9 @@ class Assembler8080 {
             );
         }
 
+        // =========================
         // Instrucción de 1 byte
+        // =========================
         else {
 
             bytes.push(byte1);
@@ -852,6 +929,9 @@ class Assembler8080 {
 
         let parsed;
 
+        // =========================
+        // HEX con H
+        // =========================
         if (
             val.endsWith('H') ||
             val.endsWith('h')
@@ -863,6 +943,9 @@ class Assembler8080 {
                 );
         }
 
+        // =========================
+        // HEX con 0x
+        // =========================
         else if (
             val.startsWith('0X') ||
             val.startsWith('0x')
@@ -874,6 +957,9 @@ class Assembler8080 {
                 );
         }
 
+        // =========================
+        // DECIMAL / FLOAT
+        // =========================
         else {
             parsed =
                 parseFloat(val);
