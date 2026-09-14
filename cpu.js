@@ -733,6 +733,18 @@ if (opcode === 0xC2) {
     return;
 }
 
+        // JZ - Jump if Zero
+if (opcode === 0xCA) {
+
+    const addr = this.fetch16();
+
+    if (this.flags.z) {
+        this.registers.pc = addr;
+    }
+
+    return;
+}
+
 // JMP
 if (opcode === 0xC3) {
 
