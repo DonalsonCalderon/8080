@@ -721,6 +721,9 @@ class Intel8080 {
             return;
         }
 
+        console.log("OPCODE EJECUTADO:", opcode.toString(16).toUpperCase());
+
+
       // JNZ - Jump if Not Zero
 if (opcode === 0xC2) {
 
