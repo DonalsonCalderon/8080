@@ -536,23 +536,25 @@ document.addEventListener("DOMContentLoaded", () => {
             updateUI();
 
 
-            const bytes =
-                Array.from(result.binary)
-                    .map(byte => hex(byte))
-                    .join(" ");
-
-
-            assemblerOutput.innerHTML = `
-                <div class="message success">
-                    <strong>Assembly successful.</strong>
-                    <br>
-                    ${result.binary.length} bytes loaded.
-                </div>
-
-                <div class="machine-code">
-                    ${bytes}
-                </div>
-            `;
+                            const bytes =
+                    Array.from(
+                        result.binary.slice(0, result.maxAddr)
+                    )
+                        .map(byte => hex(byte))
+                        .join(" ");
+                
+                
+                assemblerOutput.innerHTML = `
+                    <div class="message success">
+                        <strong>Assembly successful.</strong>
+                        <br>
+                        ${result.maxAddr} bytes loaded.
+                    </div>
+                
+                    <div class="machine-code">
+                        ${bytes}
+                    </div>
+                `;
 
 
             setStatus("Loaded");
