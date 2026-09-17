@@ -59,9 +59,9 @@ class Assembler8080 {
 
             'RST': { bytes: 1 },
 
-            // =========================
+            
             // FPU
-            // =========================
+            
             'FADD': { bytes: 2 },
             'FSUB': { bytes: 2 },
             'FMUL': { bytes: 2 },
@@ -106,9 +106,9 @@ class Assembler8080 {
         const labels = {};
         let currentPC = 0;
 
-        // =========================
+        
         // PRIMERA PASADA
-        // =========================
+        
         const passes = lines.map(line => {
             line = line.split(';')[0].trim();
 
@@ -140,14 +140,12 @@ class Assembler8080 {
             const mnemonic =
                 tokens[0].toUpperCase();
 
-            console.log(
-                "Assembler mnemonic:",
-                mnemonic
+            
             );
 
-            // =========================
+            
             // ORG
-            // =========================
+           
             if (mnemonic === 'ORG') {
                 currentPC =
                     this.parseValue(tokens[1]);
@@ -164,9 +162,9 @@ class Assembler8080 {
                 };
             }
 
-            // =========================
+         
             // DB
-            // =========================
+           
             if (mnemonic === 'DB') {
                 const pc = currentPC;
 
@@ -181,9 +179,9 @@ class Assembler8080 {
                 };
             }
 
-            // =========================
+            
             // BUSCAR OPCODE
-            // =========================
+           
             const info =
                 this.opcodes[mnemonic];
 
@@ -206,9 +204,9 @@ class Assembler8080 {
             };
         }).filter(l => l);
 
-        // =========================
+        
         // SEGUNDA PASADA
-        // =========================
+        
         const binary =
             new Uint8Array(65536);
 
@@ -221,9 +219,9 @@ class Assembler8080 {
 
             let pc = line.pc;
 
-            // =========================
+            
             // DB
-            // =========================
+          
             if (line.type === 'data') {
                 for (
                     let i = 1;
@@ -238,9 +236,9 @@ class Assembler8080 {
                 }
             }
 
-            // =========================
+           
             // INSTRUCCIÓN
-            // =========================
+           
             else {
                 const bytes =
                     this.generateOpcode(
@@ -287,9 +285,9 @@ class Assembler8080 {
                 ? tokens[2].toUpperCase()
                 : null;
 
-                  // =========================
+                  
             // FPU
-            // =========================
+          
             if (
                 [
                     'FADD',
@@ -311,51 +309,51 @@ class Assembler8080 {
 
             switch (mnemonic) {
 
-                // =========================
+                
                 // FADD
-                // =========================
+                
                 case 'FADD':
                     bytes.push(0x01);
                     break;
 
-                // =========================
+                
                 // FSUB
-                // =========================
+                
                 case 'FSUB':
                     bytes.push(0x02);
                     break;
 
-                // =========================
+                
                 // FMUL
-                // =========================
+                
                 case 'FMUL':
                     bytes.push(0x03);
                     break;
 
-                // =========================
+                
                 // FDIV
-                // =========================
+                
                 case 'FDIV':
                     bytes.push(0x07);
                     break;
 
-                // =========================
+                
                 // FSQRT
-                // =========================
+                
                 case 'FSQRT':
                     bytes.push(0x08);
                     break;
 
-                // =========================
+                
                 // FCMP
-                // =========================
+                
                 case 'FCMP':
                     bytes.push(0x09);
                     break;
 
-                // =========================
+               
                 // FSTORE
-                // =========================
+                
                 case 'FSTORE': {
 
                     bytes.push(0x0A);
@@ -393,8 +391,7 @@ class Assembler8080 {
                             labels
                         );
 
-                    // Dirección de 16 bits
-                    // little-endian
+                    
                     bytes.push(
                         address & 0xFF,
                         (address >> 8) & 0xFF
@@ -403,10 +400,9 @@ class Assembler8080 {
                     break;
                 }
 
-                // =========================
+                
                 // FLD
-                // Cargar desde memoria
-                // =========================
+                
                 case 'FLD': {
 
                     bytes.push(0x0B);
@@ -437,15 +433,14 @@ class Assembler8080 {
                         registerCodes[register]
                     );
 
-                    // Dirección de memoria
+                    
                     const address =
                         this.parseValue(
                             tokens[2],
                             labels
                         );
 
-                    // Dirección de 16 bits
-                    // little-endian
+                    
                     bytes.push(
                         address & 0xFF,
                         (address >> 8) & 0xFF
@@ -454,9 +449,9 @@ class Assembler8080 {
                     break;
                 }
 
-                // =========================
+                
                 // FLD0 / FLD1
-                // =========================
+                
                 case 'FLD0':
                 case 'FLD1': {
 
@@ -472,10 +467,7 @@ class Assembler8080 {
                             labels
                         );
 
-                    // =========================
-                    // Convertir a IEEE-754
-                    // single precision
-                    // =========================
+                   
                     const buffer =
                         new ArrayBuffer(4);
 
@@ -501,9 +493,9 @@ class Assembler8080 {
                     break;
                 }
 
-                // =========================
+                
                 // FSWAP
-                // =========================
+                
                 case 'FSWAP':
                     bytes.push(0x06);
                     break;
@@ -512,9 +504,9 @@ class Assembler8080 {
             return bytes;
         }
 
-        // =========================
+       
         // 8080
-        // =========================
+      
         let byte1 =
             line.info
                 ? line.info.code
@@ -523,9 +515,9 @@ class Assembler8080 {
         let byte2 = 0;
         let byte3 = 0;
 
-        // =========================
+        
         // MOV
-        // =========================
+        
         if (mnemonic === 'MOV') {
 
             if (
@@ -561,9 +553,9 @@ class Assembler8080 {
             bytes.push(byte1);
         }
 
-        // =========================
+       
         // MVI
-        // =========================
+        
         else if (mnemonic === 'MVI') {
 
             if (
@@ -590,9 +582,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+       
         // LXI
-        // =========================
+      
         else if (mnemonic === 'LXI') {
 
             if (
@@ -626,9 +618,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // ALU
-        // =========================
+        
         else if (
             [
                 'ADD',
@@ -668,9 +660,9 @@ class Assembler8080 {
             bytes.push(byte1);
         }
 
-        // =========================
+        
         // INR
-        // =========================
+        
         else if (mnemonic === 'INR') {
 
             if (
@@ -687,9 +679,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // DCR
-        // =========================
+       
         else if (mnemonic === 'DCR') {
 
             if (
@@ -706,9 +698,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+      
         // INX
-        // =========================
+        
         else if (mnemonic === 'INX') {
 
             if (
@@ -725,9 +717,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+       
         // DCX
-        // =========================
+      
         else if (mnemonic === 'DCX') {
 
             if (
@@ -744,9 +736,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+       
         // DAD
-        // =========================
+        
         else if (mnemonic === 'DAD') {
 
             if (
@@ -763,9 +755,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // PUSH
-        // =========================
+        
         else if (mnemonic === 'PUSH') {
 
             if (
@@ -782,9 +774,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // POP
-        // =========================
+        
         else if (mnemonic === 'POP') {
 
             if (
@@ -801,9 +793,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // STAX
-        // =========================
+       
         else if (mnemonic === 'STAX') {
 
             if (
@@ -820,9 +812,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+       
         // LDAX
-        // =========================
+        
         else if (mnemonic === 'LDAX') {
 
             if (
@@ -839,9 +831,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // RST
-        // =========================
+       
         else if (mnemonic === 'RST') {
 
             const val =
@@ -866,9 +858,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+       
         // Instrucción de 3 bytes
-        // =========================
+        
         else if (
             line.info.bytes === 3
         ) {
@@ -886,9 +878,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // Instrucción de 2 bytes
-        // =========================
+    
         else if (
             line.info.bytes === 2
         ) {
@@ -902,9 +894,9 @@ class Assembler8080 {
             );
         }
 
-        // =========================
+        
         // Instrucción de 1 byte
-        // =========================
+        
         else {
 
             bytes.push(byte1);
@@ -929,9 +921,9 @@ class Assembler8080 {
 
         let parsed;
 
-        // =========================
+        
         // HEX con H
-        // =========================
+        
         if (
             val.endsWith('H') ||
             val.endsWith('h')
@@ -943,9 +935,9 @@ class Assembler8080 {
                 );
         }
 
-        // =========================
+        
         // HEX con 0x
-        // =========================
+       
         else if (
             val.startsWith('0X') ||
             val.startsWith('0x')
@@ -957,9 +949,9 @@ class Assembler8080 {
                 );
         }
 
-        // =========================
+        
         // DECIMAL / FLOAT
-        // =========================
+        
         else {
             parsed =
                 parseFloat(val);
@@ -987,9 +979,9 @@ class Assembler8080 {
 }
 
 
-// =========================
+
 // EXPORTS
-// =========================
+
 
 if (
     typeof module !== 'undefined'
