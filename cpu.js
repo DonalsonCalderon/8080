@@ -1,5 +1,4 @@
-// cpu.js
-// Intel 8080 CPU Emulator + Conceptual Floating Point Coprocessor
+
 
 let FloatingPointUnitClass;
 
@@ -9,9 +8,12 @@ if (typeof module !== 'undefined' && module.exports) {
     FloatingPointUnitClass = window.FloatingPointUnit;
 }
 
+
 class Intel8080 {
 
     constructor() {
+
+        // 8080 utiliza un espacio de memoria de 64 KB
         this.memory = new Uint8Array(65536);
 
         if (!FloatingPointUnitClass) {
@@ -20,6 +22,7 @@ class Intel8080 {
             );
         }
 
+       
         this.fpu = new FloatingPointUnitClass();
 
         this.cpuStats = {
@@ -29,6 +32,7 @@ class Intel8080 {
 
         this.reset();
     }
+
 
     reset() {
 
@@ -44,6 +48,7 @@ class Intel8080 {
             pc: 0
         };
 
+        // Flags principales del Intel 8080
         this.flags = {
             s: false,
             z: false,
@@ -66,21 +71,23 @@ class Intel8080 {
         }
     }
 
+
+    
     getRP(rp) {
 
         switch (rp) {
 
             case 'bc':
                 return (this.registers.b << 8) |
-                       this.registers.c;
+                    this.registers.c;
 
             case 'de':
                 return (this.registers.d << 8) |
-                       this.registers.e;
+                    this.registers.e;
 
             case 'hl':
                 return (this.registers.h << 8) |
-                       this.registers.l;
+                    this.registers.l;
 
             case 'sp':
                 return this.registers.sp;
@@ -90,6 +97,8 @@ class Intel8080 {
         }
     }
 
+
+    
     setRP(rp, value) {
 
         value &= 0xFFFF;
@@ -97,27 +106,18 @@ class Intel8080 {
         switch (rp) {
 
             case 'bc':
-                this.registers.b =
-                    (value >> 8) & 0xFF;
-
-                this.registers.c =
-                    value & 0xFF;
+                this.registers.b = (value >> 8) & 0xFF;
+                this.registers.c = value & 0xFF;
                 break;
 
             case 'de':
-                this.registers.d =
-                    (value >> 8) & 0xFF;
-
-                this.registers.e =
-                    value & 0xFF;
+                this.registers.d = (value >> 8) & 0xFF;
+                this.registers.e = value & 0xFF;
                 break;
 
             case 'hl':
-                this.registers.h =
-                    (value >> 8) & 0xFF;
-
-                this.registers.l =
-                    value & 0xFF;
+                this.registers.h = (value >> 8) & 0xFF;
+                this.registers.l = value & 0xFF;
                 break;
 
             case 'sp':
@@ -126,6 +126,8 @@ class Intel8080 {
         }
     }
 
+
+    // Convierte los flags del CPU al formato del registro F
     getFlagByte() {
 
         let res = 0x02;
@@ -153,42 +155,34 @@ class Intel8080 {
         return res;
     }
 
+
+    
     setFlagByte(val) {
 
-        this.flags.s =
-            (val & 0x80) !== 0;
-
-        this.flags.z =
-            (val & 0x40) !== 0;
-
-        this.flags.ac =
-            (val & 0x10) !== 0;
-
-        this.flags.p =
-            (val & 0x04) !== 0;
-
-        this.flags.cy =
-            (val & 0x01) !== 0;
+        this.flags.s = (val & 0x80) !== 0;
+        this.flags.z = (val & 0x40) !== 0;
+        this.flags.ac = (val & 0x10) !== 0;
+        this.flags.p = (val & 0x04) !== 0;
+        this.flags.cy = (val & 0x01) !== 0;
     }
 
+
+    
     updateFlags(val, setAC = false, acVal = 0) {
 
         val &= 0xFF;
 
-        this.flags.z =
-            val === 0;
-
-        this.flags.s =
-            (val & 0x80) !== 0;
-
-        this.flags.p =
-            this.checkParity(val);
+        this.flags.z = val === 0;
+        this.flags.s = (val & 0x80) !== 0;
+        this.flags.p = this.checkParity(val);
 
         if (setAC) {
             this.flags.ac = acVal;
         }
     }
 
+
+  
     checkParity(val) {
 
         let count = 0;
@@ -203,12 +197,15 @@ class Intel8080 {
         return count % 2 === 0;
     }
 
+
+   
     readMemory(addr) {
 
         return this.memory[
             addr & 0xFFFF
         ];
     }
+
 
     writeMemory(addr, val) {
 
@@ -217,12 +214,12 @@ class Intel8080 {
         ] = val & 0xFF;
     }
 
+
+   
     fetch() {
 
         const byte =
-            this.readMemory(
-                this.registers.pc
-            );
+            this.readMemory(this.registers.pc);
 
         this.registers.pc =
             (this.registers.pc + 1) & 0xFFFF;
@@ -230,6 +227,8 @@ class Intel8080 {
         return byte;
     }
 
+
+   
     fetch16() {
 
         const low = this.fetch();
@@ -237,6 +236,8 @@ class Intel8080 {
 
         return low | (high << 8);
     }
+
+
 
     push(value) {
 
@@ -259,20 +260,18 @@ class Intel8080 {
         );
     }
 
+
+  
     pop() {
 
         const low =
-            this.readMemory(
-                this.registers.sp
-            );
+            this.readMemory(this.registers.sp);
 
         this.registers.sp =
             (this.registers.sp + 1) & 0xFFFF;
 
         const high =
-            this.readMemory(
-                this.registers.sp
-            );
+            this.readMemory(this.registers.sp);
 
         this.registers.sp =
             (this.registers.sp + 1) & 0xFFFF;
@@ -280,6 +279,8 @@ class Intel8080 {
         return low | (high << 8);
     }
 
+
+ 
     getRegByCode(code) {
 
         switch (code) {
@@ -315,6 +316,8 @@ class Intel8080 {
         }
     }
 
+
+    
     setRegByCode(code, val) {
 
         val &= 0xFF;
@@ -358,6 +361,8 @@ class Intel8080 {
         }
     }
 
+
+    
     executeALU(op, val) {
 
         let res;
@@ -382,6 +387,7 @@ class Intel8080 {
                     res & 0xFF;
 
                 break;
+
 
             case 1: // ADC
 
@@ -408,6 +414,7 @@ class Intel8080 {
 
                 break;
 
+
             case 2: // SUB
 
                 res =
@@ -427,6 +434,7 @@ class Intel8080 {
                     res & 0xFF;
 
                 break;
+
 
             case 3: // SBB
 
@@ -453,6 +461,7 @@ class Intel8080 {
 
                 break;
 
+
             case 4: // ANA
 
                 res =
@@ -467,6 +476,7 @@ class Intel8080 {
 
                 break;
 
+
             case 5: // XRA
 
                 res =
@@ -479,6 +489,7 @@ class Intel8080 {
 
                 break;
 
+
             case 6: // ORA
 
                 res =
@@ -490,6 +501,7 @@ class Intel8080 {
                 this.registers.a = res;
 
                 break;
+
 
             case 7: // CMP
 
@@ -516,20 +528,23 @@ class Intel8080 {
         );
     }
 
+
     execute(opcode) {
 
-        // NOP
+        // Instrucción sin operación
         if (opcode === 0x00) {
             return;
         }
 
-        // HLT
+
+        
         if (opcode === 0x76) {
 
             this.halted = true;
 
             return;
         }
+
 
         // MVI A, immediate
         if (opcode === 0x3E) {
@@ -544,6 +559,7 @@ class Intel8080 {
             return;
         }
 
+
         // MVI B, immediate
         if (opcode === 0x06) {
 
@@ -552,6 +568,7 @@ class Intel8080 {
 
             return;
         }
+
 
         // MVI C, immediate
         if (opcode === 0x0E) {
@@ -562,6 +579,7 @@ class Intel8080 {
             return;
         }
 
+
         // MVI D, immediate
         if (opcode === 0x16) {
 
@@ -570,6 +588,7 @@ class Intel8080 {
 
             return;
         }
+
 
         // MVI E, immediate
         if (opcode === 0x1E) {
@@ -580,6 +599,7 @@ class Intel8080 {
             return;
         }
 
+
         // MVI H, immediate
         if (opcode === 0x26) {
 
@@ -588,6 +608,7 @@ class Intel8080 {
 
             return;
         }
+
 
         // MVI L, immediate
         if (opcode === 0x2E) {
@@ -598,7 +619,8 @@ class Intel8080 {
             return;
         }
 
-        // INR A
+
+        // Incrementa el acumulador
         if (opcode === 0x3C) {
 
             const old =
@@ -622,7 +644,8 @@ class Intel8080 {
             return;
         }
 
-        // DCR A
+
+        
         if (opcode === 0x3D) {
 
             const old =
@@ -650,7 +673,8 @@ class Intel8080 {
             return;
         }
 
-        // MOV instructions
+
+      
         if (
             opcode >= 0x40 &&
             opcode <= 0x7F &&
@@ -674,7 +698,8 @@ class Intel8080 {
             return;
         }
 
-        // ALU group
+
+     
         if (
             opcode >= 0x80 &&
             opcode <= 0xBF
@@ -697,7 +722,8 @@ class Intel8080 {
             return;
         }
 
-        // CPI - Compare Immediate
+
+        // CPI 
         if (opcode === 0xFE) {
 
             const value =
@@ -721,70 +747,72 @@ class Intel8080 {
             return;
         }
 
-    
 
+        // JNZ - Jump if Not Zero
+        if (opcode === 0xC2) {
 
-      // JNZ - Jump if Not Zero
-if (opcode === 0xC2) {
+            const addr =
+                this.fetch16();
 
-    const addr = this.fetch16();
+            if (!this.flags.z) {
+                this.registers.pc = addr;
+            }
 
-    if (!this.flags.z) {
-        this.registers.pc = addr;
-    }
+            return;
+        }
 
-    return;
-}
 
         // JZ - Jump if Zero
-if (opcode === 0xCA) {
+        if (opcode === 0xCA) {
 
-    const addr = this.fetch16();
+            const addr =
+                this.fetch16();
 
-    if (this.flags.z) {
-        this.registers.pc = addr;
-    }
+            if (this.flags.z) {
+                this.registers.pc = addr;
+            }
 
-    return;
-}
+            return;
+        }
 
-       
+
         // JC - Jump if Carry
-if (opcode === 0xDA) {
+        if (opcode === 0xDA) {
 
-    const addr = this.fetch16();
+            const addr =
+                this.fetch16();
 
-    if (this.flags.cy) {
-        this.registers.pc = addr;
-    }
+            if (this.flags.cy) {
+                this.registers.pc = addr;
+            }
 
-    return;
-}
+            return;
+        }
 
-console.log("JNC DETECTADO:", opcode.toString(16).toUpperCase());
+
         // JNC - Jump if No Carry
-if (opcode === 0xD2) {
+        if (opcode === 0xD2) {
 
-    const addr = this.fetch16();
+            const addr =
+                this.fetch16();
 
-    if (!this.flags.cy) {
-        this.registers.pc = addr;
-    }
+            if (!this.flags.cy) {
+                this.registers.pc = addr;
+            }
 
-    return;
-}
+            return;
+        }
 
-        
 
-// JMP
-if (opcode === 0xC3) {
+        // JMP - salto incondicional
+        if (opcode === 0xC3) {
 
-    this.registers.pc =
-        this.fetch16();
+            this.registers.pc =
+                this.fetch16();
 
-    return;
-}
-        
+            return;
+        }
+
 
         // CALL
         if (opcode === 0xCD) {
@@ -801,6 +829,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // RET
         if (opcode === 0xC9) {
 
@@ -809,6 +838,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // PUSH BC
         if (opcode === 0xC5) {
@@ -820,6 +850,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // PUSH DE
         if (opcode === 0xD5) {
 
@@ -830,6 +861,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // PUSH HL
         if (opcode === 0xE5) {
 
@@ -839,6 +871,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // PUSH PSW
         if (opcode === 0xF5) {
@@ -851,6 +884,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // POP BC
         if (opcode === 0xC1) {
 
@@ -861,6 +895,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // POP DE
         if (opcode === 0xD1) {
@@ -873,6 +908,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // POP HL
         if (opcode === 0xE1) {
 
@@ -883,6 +919,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // POP PSW
         if (opcode === 0xF1) {
@@ -899,6 +936,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // RLC
         if (opcode === 0x07) {
@@ -918,6 +956,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // RRC
         if (opcode === 0x0F) {
 
@@ -935,6 +974,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // RAL
         if (opcode === 0x17) {
@@ -956,6 +996,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // RAR
         if (opcode === 0x1F) {
 
@@ -974,7 +1015,8 @@ if (opcode === 0xC3) {
             return;
         }
 
-        // CMA
+
+        // Complementa el acumulador
         if (opcode === 0x2F) {
 
             this.registers.a =
@@ -983,7 +1025,8 @@ if (opcode === 0xC3) {
             return;
         }
 
-        // DAA
+
+        // DAA - Decimal Adjust Accumulator
         if (opcode === 0x27) {
 
             let result =
@@ -1025,7 +1068,8 @@ if (opcode === 0xC3) {
             return;
         }
 
-        // STC
+
+        // Set Carry
         if (opcode === 0x37) {
 
             this.flags.cy = true;
@@ -1033,7 +1077,8 @@ if (opcode === 0xC3) {
             return;
         }
 
-        // CMC
+
+        // Complement Carry
         if (opcode === 0x3F) {
 
             this.flags.cy =
@@ -1041,6 +1086,7 @@ if (opcode === 0xC3) {
 
             return;
         }
+
 
         // IN
         if (opcode === 0xDB) {
@@ -1050,6 +1096,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // OUT
         if (opcode === 0xD3) {
 
@@ -1058,6 +1105,7 @@ if (opcode === 0xC3) {
             return;
         }
 
+
         // EI / DI
         if (
             opcode === 0xFB ||
@@ -1065,6 +1113,7 @@ if (opcode === 0xC3) {
         ) {
             return;
         }
+
 
         throw new Error(
             `Unsupported opcode: ${
@@ -1076,138 +1125,155 @@ if (opcode === 0xC3) {
         );
     }
 
+
+    
+    // FPU - instrucciones del coprocesador de punto flotante
+   
+
     executeFPU() {
 
         const operation =
             this.fetch();
 
-        console.log(
-        "FPU OPCODE EJECUTADO:",
-        operation.toString(16).toUpperCase().padStart(2, '0')
-    );
-
         switch (operation) {
 
-            case 0x01: // FADD
+            // FP0 = FP0 + FP1
+            case 0x01:
 
                 this.fpu.fadd();
 
                 break;
 
-            case 0x02: // FSUB
+
+            // FP0 = FP0 - FP1
+            case 0x02:
 
                 this.fpu.fsub();
 
                 break;
 
-            case 0x03: // FMUL
+
+            // FP0 = FP0 * FP1
+            case 0x03:
 
                 this.fpu.fmul();
 
                 break;
 
-                case 0x07: //DIV
+
+            // FP0 = FP0 / FP1
+            case 0x07:
+
                 this.fpu.fdiv();
+
                 break;
 
-                case 0x08: // FSQRT
+
+        
+            case 0x08:
+
                 this.fpu.fsqrt();
+
                 break;
-                
-                case 0x09: //FCMP
-                    this.fpu.fcmp();
-                    break;
-                
+
+
+            
+            case 0x09:
+
+                this.fpu.fcmp();
+
+                break;
+
+
            
-                case 0x0A: {
-                    // Leer registro FPU
-                    const registerCode = this.fetch();
-                
-                    const registers = [
-                        'f0',
-                        'f1',
-                        'f2',
-                        'f3'
-                    ];
-                
-                    if (registerCode > 3) {
-                        throw new Error(
-                            `Registro FPU inválido: ${registerCode}`
-                        );
-                    }
-                
-                    // Leer dirección de memoria
-                    const address = this.fetch16();
-                
-                    // Obtener valor del registro FPU
-                    const value =
-                        this.fpu.fstore(
-                            registers[registerCode]
-                        );
-                
-                    // Convertir el valor a IEEE-754 float32
-                    const bits =
-                        this.fpu.toIEEE754(value);
-                
-                    // Guardar los 4 bytes en memoria
-                    this.memory[address] =
-                        bits & 0xFF;
-                
-                    this.memory[(address + 1) & 0xFFFF] =
-                        (bits >> 8) & 0xFF;
-                
-                    this.memory[(address + 2) & 0xFFFF] =
-                        (bits >> 16) & 0xFF;
-                
-                    this.memory[(address + 3) & 0xFFFF] =
-                        (bits >> 24) & 0xFF;
-                
-                    break;
+            case 0x0A: {
+
+                const registerCode =
+                    this.fetch();
+
+                const registers = [
+                    'f0',
+                    'f1',
+                    'f2',
+                    'f3'
+                ];
+
+                if (registerCode > 3) {
+                    throw new Error(
+                        `Registro FPU inválido: ${registerCode}`
+                    );
                 }
 
-                
-                    case 0x0B: { // FLD desde memoria
-                        // Leer registro FPU
-                        const registerCode = this.fetch();
-                    
-                        const registers = [
-                            'f0',
-                            'f1',
-                            'f2',
-                            'f3'
-                        ];
-                    
-                        if (registerCode > 3) {
-                            throw new Error(
-                                `Registro FPU inválido: ${registerCode}`
-                            );
-                        }
-                    
-                        // Leer dirección de memoria
-                        const address = this.fetch16();
-                    
-                        // Leer los 4 bytes IEEE-754 desde memoria
-                        const bits =
-                            this.memory[address] |
-                            (this.memory[(address + 1) & 0xFFFF] << 8) |
-                            (this.memory[(address + 2) & 0xFFFF] << 16) |
-                            (this.memory[(address + 3) & 0xFFFF] << 24);
-                    
-                        // Convertir IEEE-754 a número JavaScript
-                        const value =
-                            this.fpu.fromIEEE754(bits);
-                    
-                        // Cargar en el registro FPU
-                        this.fpu.fload(
-                            registers[registerCode],
-                            value
-                        );
-                    
-                        break;
-                    }
-                    
+                const address =
+                    this.fetch16();
 
-            case 0x04: { // FLD0
+                const value =
+                    this.fpu.fstore(
+                        registers[registerCode]
+                    );
+
+                // La memoria almacena el número como IEEE-754 de 32 bits
+                const bits =
+                    this.fpu.toIEEE754(value);
+
+                this.memory[address] =
+                    bits & 0xFF;
+
+                this.memory[(address + 1) & 0xFFFF] =
+                    (bits >> 8) & 0xFF;
+
+                this.memory[(address + 2) & 0xFFFF] =
+                    (bits >> 16) & 0xFF;
+
+                this.memory[(address + 3) & 0xFFFF] =
+                    (bits >> 24) & 0xFF;
+
+                break;
+            }
+
+
+           
+            case 0x0B: {
+
+                const registerCode =
+                    this.fetch();
+
+                const registers = [
+                    'f0',
+                    'f1',
+                    'f2',
+                    'f3'
+                ];
+
+                if (registerCode > 3) {
+                    throw new Error(
+                        `Registro FPU inválido: ${registerCode}`
+                    );
+                }
+
+                const address =
+                    this.fetch16();
+
+                const bits =
+                    this.memory[address] |
+                    (this.memory[(address + 1) & 0xFFFF] << 8) |
+                    (this.memory[(address + 2) & 0xFFFF] << 16) |
+                    (this.memory[(address + 3) & 0xFFFF] << 24);
+
+                const value =
+                    this.fpu.fromIEEE754(bits);
+
+                this.fpu.fload(
+                    registers[registerCode],
+                    value
+                );
+
+                break;
+            }
+
+
+            
+            case 0x04: {
 
                 const bits =
                     this.fetch16() |
@@ -1224,7 +1290,9 @@ if (opcode === 0xC3) {
                 break;
             }
 
-            case 0x05: { // FLD1
+
+           
+            case 0x05: {
 
                 const bits =
                     this.fetch16() |
@@ -1241,11 +1309,14 @@ if (opcode === 0xC3) {
                 break;
             }
 
-            case 0x06: // FSWAP
+
+            // Intercambia FP0 y FP1
+            case 0x06:
 
                 this.fpu.fswap();
 
                 break;
+
 
             default:
 
@@ -1260,6 +1331,8 @@ if (opcode === 0xC3) {
         }
     }
 
+
+    
     step() {
 
         if (this.halted) {
@@ -1272,6 +1345,7 @@ if (opcode === 0xC3) {
         const previousFPUCycles =
             this.fpu.stats.cycles;
 
+        
         if (opcode === 0xED) {
 
             this.executeFPU();
@@ -1283,6 +1357,7 @@ if (opcode === 0xC3) {
 
         this.cpuStats.instructions++;
 
+        
         const fpuCycleDelta =
             this.fpu.stats.cycles -
             previousFPUCycles;
@@ -1294,14 +1369,19 @@ if (opcode === 0xC3) {
 
         } else {
 
+            
             this.cpuStats.cycles += 4;
         }
     }
 }
 
+
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Intel8080;
 }
+
+
 
 if (typeof window !== 'undefined') {
     window.Intel8080 = Intel8080;
