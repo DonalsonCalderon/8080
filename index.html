@@ -6,6 +6,7 @@
 
     <title>Intel 8080 Emulator & Assembler</title>
 
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -13,8 +14,11 @@
 
 <header>
     <div class="header-container">
+
+        
         <div>
             <h1>Intel 8080 Emulator & Assembler</h1>
+
             <p class="subtitle">
                 Intel 8080 CPU with conceptual IEEE-754 Floating Point Coprocessor
             </p>
@@ -26,9 +30,7 @@
 
 <main>
 
-    <!-- =========================
-         ASSEMBLER
-    ========================== -->
+  
     <section id="editor-section">
 
         <h2>Assembler</h2>
@@ -48,30 +50,32 @@ HLT"></textarea>
 
         <div class="controls">
 
+         
             <button id="btn-assemble">
                 Assemble & Load
             </button>
 
+            
             <button id="btn-clear-code" class="btn-clear">
                 Clear Code
             </button>
 
         </div>
 
+        <!-- Aquí se muestra el resultado del proceso de ensamblado -->
         <div id="assembler-output"></div>
 
     </section>
 
 
-    <!-- =========================
-         CPU DASHBOARD
-    ========================== -->
+ 
     <section id="emulator-section">
 
         <h2>CPU Dashboard</h2>
 
         <div class="controls">
 
+           
             <button id="btn-run">
                 Run
             </button>
@@ -88,6 +92,7 @@ HLT"></textarea>
                 Reset
             </button>
 
+          
             <span id="status-badge">
                 Idle
             </span>
@@ -95,19 +100,16 @@ HLT"></textarea>
         </div>
 
 
-        <!-- =========================
-             CPU GRID
-        ========================== -->
+
         <div class="cpu-grid">
 
 
-            <!-- =====================
-                 REGISTERS
-            ====================== -->
+           
             <div class="card registers">
 
                 <h3>Registers</h3>
 
+            
                 <div class="reg-row">
 
                     <div class="reg-box">
@@ -123,6 +125,7 @@ HLT"></textarea>
                 </div>
 
 
+               
                 <div class="reg-row">
 
                     <div class="reg-box">
@@ -138,6 +141,7 @@ HLT"></textarea>
                 </div>
 
 
+               
                 <div class="reg-row">
 
                     <div class="reg-box">
@@ -153,6 +157,7 @@ HLT"></textarea>
                 </div>
 
 
+                
                 <div class="reg-row">
 
                     <div class="reg-box">
@@ -168,6 +173,7 @@ HLT"></textarea>
                 </div>
 
 
+            
                 <div class="reg-row">
 
                     <div class="reg-box extended">
@@ -183,9 +189,7 @@ HLT"></textarea>
                 </div>
 
 
-                <!-- =================
-                     FPU REGISTERS
-                ================== -->
+               
                 <h3 class="fpu-title">
                     FPU Coprocessor
                 </h3>
@@ -221,15 +225,11 @@ HLT"></textarea>
             </div>
 
 
-            <!-- =====================
-                 RIGHT DASHBOARD
-            ====================== -->
+           
             <div class="dashboard-right">
 
 
-                <!-- =================
-                     CPU FLAGS
-                ================== -->
+              
                 <div class="card flags">
 
                     <h3>CPU Flags</h3>
@@ -244,7 +244,6 @@ HLT"></textarea>
                             <div id="flag-s">0</div>
                         </div>
 
-
                         <div
                             class="flag-box"
                             title="Zero Flag"
@@ -252,7 +251,6 @@ HLT"></textarea>
                             <span>Z</span>
                             <div id="flag-z">0</div>
                         </div>
-
 
                         <div
                             class="flag-box"
@@ -262,7 +260,6 @@ HLT"></textarea>
                             <div id="flag-ac">0</div>
                         </div>
 
-
                         <div
                             class="flag-box"
                             title="Parity Flag"
@@ -270,7 +267,6 @@ HLT"></textarea>
                             <span>P</span>
                             <div id="flag-p">0</div>
                         </div>
-
 
                         <div
                             class="flag-box"
@@ -285,9 +281,7 @@ HLT"></textarea>
                 </div>
 
 
-                <!-- =================
-                     FPU FLAGS
-                ================== -->
+              
                 <div class="card flags">
 
                     <h3>FPU Flags</h3>
@@ -324,9 +318,7 @@ HLT"></textarea>
                 </div>
 
 
-                <!-- =================
-                     FPU STATISTICS
-                ================== -->
+               
                 <div class="card fpu-stats">
 
                     <h3>FPU Statistics</h3>
@@ -358,9 +350,7 @@ HLT"></textarea>
                 </div>
 
 
-                <!-- =================
-                     STACK
-                ================== -->
+                
                 <div class="card stack">
 
                     <h3>Stack View (around SP)</h3>
@@ -372,15 +362,14 @@ HLT"></textarea>
             </div>
 
 
-            <!-- =====================
-                 MEMORY
-            ====================== -->
+            
             <div class="card memory">
 
                 <h3>Memory View</h3>
 
                 <div class="mem-controls">
 
+                  
                     <input
                         type="text"
                         id="mem-start-addr"
@@ -395,14 +384,13 @@ HLT"></textarea>
 
                 </div>
 
+                
                 <div id="memory-table"></div>
 
             </div>
 
 
-            <!-- =====================
-                 EXECUTION GRAPH
-            ====================== -->
+            
             <div class="card graph-card">
 
                 <h3>Execution Statistics</h3>
@@ -473,10 +461,7 @@ HLT"></textarea>
 </main>
 
 
-<!--
-    IMPORTANT:
-    FPU must load before CPU.
--->
+
 <script src="fpu.js"></script>
 <script src="cpu.js"></script>
 <script src="assembler.js"></script>
