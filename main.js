@@ -1,11 +1,10 @@
-// main.js
-// Interface for Intel 8080 Emulator + FPU Coprocessor
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ==========================================
-    // OBJECTS
-    // ==========================================
+    
+    // OBJETOS PRINCIPALES
+
 
     const cpu = new Intel8080();
     const assembler = new Assembler8080();
@@ -14,9 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let runTimer = null;
 
 
-    // ==========================================
-    // DOM ELEMENTS
-    // ==========================================
+   
+    // ELEMENTOS DE LA INTERFAZ
+    
 
     const codeEditor =
         document.getElementById("code-editor");
@@ -28,9 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("status-badge");
 
 
-    // ==========================================
-    // BUTTONS
-    // ==========================================
+   
+    // BOTONES
+   
 
     const btnAssemble =
         document.getElementById("btn-assemble");
@@ -54,20 +53,21 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-mem-go");
 
 
-    // ==========================================
-    // HELPERS
-    // ==========================================
+    
+    // FUNCIONES AUXILIARES
+   
 
+    
     function hex(value, digits = 2) {
 
         return Number(value || 0)
             .toString(16)
             .toUpperCase()
             .padStart(digits, "0");
-
     }
 
 
+   
     function formatFloat(value) {
 
         if (typeof value !== "number") {
@@ -79,29 +79,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (!Number.isFinite(value)) {
-            return value > 0 ? "+Infinity" : "-Infinity";
+            return value > 0
+                ? "+Infinity"
+                : "-Infinity";
         }
 
-        return Number(value.toFixed(6)).toString();
-
+        return Number(
+            value.toFixed(6)
+        ).toString();
     }
 
 
+    
     function setStatus(text) {
 
         statusBadge.textContent = text;
-
     }
 
 
-    // ==========================================
-    // REGISTER UPDATE
-    // ==========================================
+    
+    // ACTUALIZAR REGISTROS
+    
 
     function updateRegisters() {
 
         const r = cpu.registers;
 
+
+        
         document.getElementById("reg-a").textContent =
             hex(r.a);
 
@@ -130,25 +135,40 @@ document.addEventListener("DOMContentLoaded", () => {
             hex(r.sp, 4);
 
 
-        // ======================================
-        // F REGISTER
-        // ======================================
+       
+        // REGISTRO DE FLAGS DEL CPU
+       
 
+        
         let f = 0x02;
 
-        if (cpu.flags.s)  f |= 0x80;
-        if (cpu.flags.z)  f |= 0x40;
-        if (cpu.flags.ac) f |= 0x10;
-        if (cpu.flags.p)  f |= 0x04;
-        if (cpu.flags.cy) f |= 0x01;
+        if (cpu.flags.s) {
+            f |= 0x80;
+        }
+
+        if (cpu.flags.z) {
+            f |= 0x40;
+        }
+
+        if (cpu.flags.ac) {
+            f |= 0x10;
+        }
+
+        if (cpu.flags.p) {
+            f |= 0x04;
+        }
+
+        if (cpu.flags.cy) {
+            f |= 0x01;
+        }
 
         document.getElementById("reg-f").textContent =
             hex(f);
 
 
-        // ======================================
-        // FPU
-        // ======================================
+       
+        // REGISTROS DE LA FPU
+     
 
         if (cpu.fpu) {
 
@@ -173,6 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 0;
 
 
+            
             document.getElementById("reg-fp0").textContent =
                 formatFloat(fp0);
 
@@ -184,18 +205,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
             document.getElementById("reg-fp3").textContent =
                 formatFloat(fp3);
-
         }
-
     }
 
 
-    // ==========================================
-    // FLAGS UPDATE
-    // ==========================================
+    
+    // ACTUALIZAR FLAGS
+
 
     function updateFlags() {
 
+       
         document.getElementById("flag-s").textContent =
             cpu.flags.s ? "1" : "0";
 
@@ -212,16 +232,16 @@ document.addEventListener("DOMContentLoaded", () => {
             cpu.flags.cy ? "1" : "0";
 
 
-        // ======================================
-        // FPU FLAGS
-        // ======================================
-
+      
         if (!cpu.fpu) {
             return;
         }
 
+
+       
         const flags =
             cpu.fpu.flags || {};
+
 
         document.getElementById("fpu-flag-z").textContent =
             flags.z ? "1" : "0";
@@ -237,13 +257,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("fpu-flag-dz").textContent =
             flags.dz ? "1" : "0";
-
     }
 
 
-    // ==========================================
-    // FPU STATISTICS
-    // ==========================================
+    
+    // ESTADÍSTICAS DE LA FPU
+    
 
     function updateFPUStats() {
 
@@ -251,12 +270,18 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+
+       
         let stats = {};
 
-        if (typeof cpu.fpu.getStats === "function") {
-            stats = cpu.fpu.getStats() || {};
+        if (
+            typeof cpu.fpu.getStats === "function"
+        ) {
+            stats =
+                cpu.fpu.getStats() || {};
         } else {
-            stats = cpu.fpu.stats || {};
+            stats =
+                cpu.fpu.stats || {};
         }
 
 
@@ -273,48 +298,52 @@ document.addEventListener("DOMContentLoaded", () => {
             stats.lastResult ?? 0;
 
 
+        // Mostrar estadísticas de la FPU.
         document.getElementById(
             "fpu-operations"
         ).textContent = operations;
-
 
         document.getElementById(
             "fpu-cycles"
         ).textContent = cycles;
 
-
         document.getElementById(
             "fpu-last-operation"
         ).textContent = lastOperation;
 
-
         document.getElementById(
             "fpu-last-result"
-        ).textContent = formatFloat(lastResult);
+        ).textContent =
+            formatFloat(lastResult);
 
 
-        // ======================================
-        // GRAPH
-        // ======================================
+       
+        // GRÁFICA DE ESTADÍSTICAS
+        
 
+        // Comparar la cantidad de instrucciones del CPU
+        // con las operaciones y ciclos de la FPU.
         const instructionCount =
             cpu.cpuStats?.instructions || 0;
 
+
         document.getElementById(
             "cpu-instructions-value"
-        ).textContent = instructionCount;
-
+        ).textContent =
+            instructionCount;
 
         document.getElementById(
             "fpu-operations-value"
-        ).textContent = operations;
-
+        ).textContent =
+            operations;
 
         document.getElementById(
             "fpu-cycles-value"
-        ).textContent = cycles;
+        ).textContent =
+            cycles;
 
 
+       
         const maxValue =
             Math.max(
                 instructionCount,
@@ -329,24 +358,21 @@ document.addEventListener("DOMContentLoaded", () => {
         ).style.width =
             `${(instructionCount / maxValue) * 100}%`;
 
-
         document.getElementById(
             "fpu-operations-bar"
         ).style.width =
             `${(operations / maxValue) * 100}%`;
 
-
         document.getElementById(
             "fpu-cycles-bar"
         ).style.width =
             `${(cycles / maxValue) * 100}%`;
-
     }
 
 
-    // ==========================================
-    // MEMORY VIEW
-    // ==========================================
+    
+    // VISTA DE MEMORIA
+
 
     function updateMemory() {
 
@@ -358,6 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
+        
         let start =
             parseInt(
                 document.getElementById(
@@ -372,9 +399,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
+        
         start &= 0xFFFF;
 
 
+        
         let html = `
             <div class="memory-header">
                 <span>Address</span>
@@ -390,10 +419,12 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
 
+       
         for (let row = 0; row < 16; row++) {
 
             const address =
                 (start + row * 8) & 0xFFFF;
+
 
             html += `
                 <div class="memory-row">
@@ -403,6 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
 
 
+         
             for (let col = 0; col < 8; col++) {
 
                 const addr =
@@ -411,25 +443,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 const value =
                     cpu.memory[addr] || 0;
 
+
                 html += `
                     <span>${hex(value)}</span>
                 `;
-
             }
 
-            html += "</div>";
 
+            html += "</div>";
         }
 
 
         table.innerHTML = html;
-
     }
 
 
-    // ==========================================
-    // STACK VIEW
-    // ==========================================
+ 
+    // VISTA DE STACK
+    
 
     function updateStack() {
 
@@ -453,6 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
 
+      
         for (let i = -4; i <= 4; i++) {
 
             const address =
@@ -468,18 +500,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span>${hex(value)}</span>
                 </div>
             `;
-
         }
 
 
         table.innerHTML = html;
-
     }
 
 
-    // ==========================================
-    // UPDATE EVERYTHING
-    // ==========================================
+    
+    // ACTUALIZAR TODA LA INTERFAZ
+ 
 
     function updateUI() {
 
@@ -488,16 +518,16 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFPUStats();
         updateMemory();
         updateStack();
-
     }
 
 
-    // ==========================================
-    // ASSEMBLE
-    // ==========================================
+   
+    // ENSAMBLAR Y CARGAR PROGRAMA
+ 
 
     function assembleProgram() {
 
+       
         stopExecution();
 
 
@@ -514,53 +544,59 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
 
             return;
-
         }
 
 
         try {
 
+            
             const result =
                 assembler.assemble(source);
 
 
+            
             cpu.reset();
 
             cpu.memory.fill(0);
 
             cpu.memory.set(result.binary);
 
-
             cpu.registers.pc = 0;
+
 
             updateUI();
 
 
-                            const bytes =
-                    Array.from(
-                        result.binary.slice(0, result.maxAddr)
+           
+            const bytes =
+                Array.from(
+                    result.binary.slice(
+                        0,
+                        result.maxAddr
                     )
-                        .map(byte => hex(byte))
-                        .join(" ");
-                
-                
-                assemblerOutput.innerHTML = `
-                    <div class="message success">
-                        <strong>Assembly successful.</strong>
-                        <br>
-                        ${result.maxAddr} bytes loaded.
-                    </div>
-                
-                    <div class="machine-code">
-                        ${bytes}
-                    </div>
-                `;
+                )
+                    .map(byte => hex(byte))
+                    .join(" ");
+
+
+            assemblerOutput.innerHTML = `
+                <div class="message success">
+                    <strong>Assembly successful.</strong>
+                    <br>
+                    ${result.maxAddr} bytes loaded.
+                </div>
+
+                <div class="machine-code">
+                    ${bytes}
+                </div>
+            `;
 
 
             setStatus("Loaded");
 
         } catch (error) {
 
+            
             assemblerOutput.innerHTML = `
                 <div class="message error">
                     <strong>Assembly error:</strong>
@@ -571,15 +607,13 @@ document.addEventListener("DOMContentLoaded", () => {
             setStatus("Error");
 
             console.error(error);
-
         }
-
     }
 
 
-    // ==========================================
-    // STEP
-    // ==========================================
+   
+    // EJECUTAR UNA INSTRUCCIÓN
+    
 
     function stepCPU() {
 
@@ -592,12 +626,12 @@ document.addEventListener("DOMContentLoaded", () => {
             updateUI();
 
             return;
-
         }
 
 
         try {
 
+            
             cpu.step();
 
             updateUI();
@@ -612,7 +646,6 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
 
                 setStatus("Running");
-
             }
 
         } catch (error) {
@@ -621,6 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             setStatus("Error");
 
+
             assemblerOutput.innerHTML = `
                 <div class="message error">
                     <strong>Execution error:</strong>
@@ -628,19 +662,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             `;
 
+
             console.error(error);
-
         }
-
     }
 
 
-    // ==========================================
-    // RUN
-    // ==========================================
+   
+    // EJECUCIÓN AUTOMÁTICA
+
 
     function runExecution() {
 
+        
         if (running) {
             return;
         }
@@ -651,36 +685,36 @@ document.addEventListener("DOMContentLoaded", () => {
         setStatus("Running");
 
 
-        runTimer = setInterval(() => {
+        
+        runTimer =
+            setInterval(() => {
 
-            if (!running) {
-                return;
-            }
-
-
-            if (cpu.halted) {
-
-                stopExecution();
-
-                setStatus("Halted");
-
-                updateUI();
-
-                return;
-
-            }
+                if (!running) {
+                    return;
+                }
 
 
-            stepCPU();
+                if (cpu.halted) {
 
-        }, 100);
+                    stopExecution();
 
+                    setStatus("Halted");
+
+                    updateUI();
+
+                    return;
+                }
+
+
+                stepCPU();
+
+            }, 100);
     }
 
 
-    // ==========================================
-    // STOP
-    // ==========================================
+    
+    // DETENER EJECUCIÓN
+    
 
     function stopExecution() {
 
@@ -692,15 +726,13 @@ document.addEventListener("DOMContentLoaded", () => {
             clearInterval(runTimer);
 
             runTimer = null;
-
         }
-
     }
 
 
-    // ==========================================
-    // RESET
-    // ==========================================
+  
+    // REINICIAR CPU
+
 
     function resetCPU() {
 
@@ -711,13 +743,12 @@ document.addEventListener("DOMContentLoaded", () => {
         updateUI();
 
         setStatus("Idle");
-
     }
 
 
-    // ==========================================
-    // CLEAR
-    // ==========================================
+    
+    // LIMPIAR CÓDIGO
+   
 
     function clearCode() {
 
@@ -732,24 +763,22 @@ document.addEventListener("DOMContentLoaded", () => {
         updateUI();
 
         setStatus("Idle");
-
     }
 
 
-    // ==========================================
-    // MEMORY GO
-    // ==========================================
+   
+    // IR A DIRECCIÓN DE MEMORIA
+    
 
     function memoryGo() {
 
         updateMemory();
-
     }
 
 
-    // ==========================================
-    // EVENTS
-    // ==========================================
+    
+    // EVENTOS DE LOS BOTONES
+   
 
     btnAssemble.addEventListener(
         "click",
@@ -776,7 +805,6 @@ document.addEventListener("DOMContentLoaded", () => {
             stopExecution();
 
             setStatus("Stopped");
-
         }
     );
 
@@ -799,27 +827,33 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
 
-    // ==========================================
-    // KEYBOARD SHORTCUT
-    // ==========================================
+    
+    // ATAJO DE TECLADO
+    
 
-    document.addEventListener("keydown", event => {
+    
+    document.addEventListener(
+        "keydown",
+        event => {
 
-        if (event.ctrlKey && event.key === "Enter") {
+            if (
+                event.ctrlKey &&
+                event.key === "Enter"
+            ) {
 
-            event.preventDefault();
+                event.preventDefault();
 
-            assembleProgram();
-
+                assembleProgram();
+            }
         }
+    );
 
-    });
 
+  
+    // ESTADO INICIAL
+    
 
-    // ==========================================
-    // INITIAL STATE
-    // ==========================================
-
+    
     cpu.reset();
 
     updateUI();
