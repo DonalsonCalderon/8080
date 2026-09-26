@@ -1,3 +1,6 @@
+console.log("ASSEMBLER NUEVO CARGADO");
+console.log("JM =", this.opcodes.JM);
+
 class Assembler8080 {
 
     constructor() {
