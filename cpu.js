@@ -1,1388 +1,1291 @@
-
-
-let FloatingPointUnitClass;
-
-if (typeof module !== 'undefined' && module.exports) {
-    FloatingPointUnitClass = require('./fpu.js');
-} else if (typeof window !== 'undefined') {
-    FloatingPointUnitClass = window.FloatingPointUnit;
-}
-
-
-class Intel8080 {
+class Assembler8080 {
 
     constructor() {
 
-        // 8080 utiliza un espacio de memoria de 64 KB
-        this.memory = new Uint8Array(65536);
+        this.opcodes = {
 
-        if (!FloatingPointUnitClass) {
-            throw new Error(
-                'FPU class not found. Make sure fpu.js is loaded before cpu.js.'
-            );
-        }
+            // =========================
+            // 8080
+            // =========================
+            'NOP':  { code: 0x00, bytes: 1 },
 
-       
-        this.fpu = new FloatingPointUnitClass();
+            'LXI':  { code: 0x01, bytes: 3 },
+            'STAX': { code: 0x02, bytes: 1 },
+            'INX':  { code: 0x03, bytes: 1 },
+            'INR':  { code: 0x04, bytes: 1 },
+            'DCR':  { code: 0x05, bytes: 1 },
+            'MVI':  { code: 0x06, bytes: 2 },
 
-        this.cpuStats = {
-            instructions: 0,
-            cycles: 0
+            'DAD':  { code: 0x09, bytes: 1 },
+            'LDAX': { code: 0x0A, bytes: 1 },
+            'DCX':  { code: 0x0B, bytes: 1 },
+
+            'RLC':  { code: 0x07, bytes: 1 },
+            'RRC':  { code: 0x0F, bytes: 1 },
+            'RAL':  { code: 0x17, bytes: 1 },
+            'RAR':  { code: 0x1F, bytes: 1 },
+
+            'MOV':  { code: 0x40, bytes: 1 },
+
+            'ADD':  { code: 0x80, bytes: 1 },
+            'ADC':  { code: 0x88, bytes: 1 },
+            'SUB':  { code: 0x90, bytes: 1 },
+            'SBB':  { code: 0x98, bytes: 1 },
+            'ANA':  { code: 0xA0, bytes: 1 },
+            'XRA':  { code: 0xA8, bytes: 1 },
+            'ORA':  { code: 0xB0, bytes: 1 },
+            'CMP':  { code: 0xB8, bytes: 1 },
+
+            'PUSH': { code: 0xC5, bytes: 1 },
+            'POP':  { code: 0xC1, bytes: 1 },
+
+            // =========================
+            // Saltos
+            // =========================
+            'JNZ': { code: 0xC2, bytes: 3 },
+            'JZ':  { code: 0xCA, bytes: 3 },
+            'JNC': { code: 0xD2, bytes: 3 },
+            'JC':  { code: 0xDA, bytes: 3 },
+
+            // NUEVO: Jump if Minus
+            'JM':  { code: 0xFA, bytes: 3 },
+
+            'JMP': { code: 0xC3, bytes: 3 },
+
+            // =========================
+            // Memoria
+            // =========================
+            // NUEVO: Store Accumulator
+            'STA': { code: 0x32, bytes: 3 },
+
+            'CALL': { code: 0xCD, bytes: 3 },
+            'RET':  { code: 0xC9, bytes: 1 },
+
+            'CPI': { code: 0xFE, bytes: 2 },
+
+            'CMA': { code: 0x2F, bytes: 1 },
+            'STC': { code: 0x37, bytes: 1 },
+            'CMC': { code: 0x3F, bytes: 1 },
+            'DAA': { code: 0x27, bytes: 1 },
+
+            'IN':  { code: 0xDB, bytes: 2 },
+            'OUT': { code: 0xD3, bytes: 2 },
+
+            'EI': { code: 0xFB, bytes: 1 },
+            'DI': { code: 0xF3, bytes: 1 },
+
+            'HLT': { code: 0x76, bytes: 1 },
+
+            'RST': { bytes: 1 },
+
+            // =========================
+            // FPU
+            // =========================
+            'FADD':   { bytes: 2 },
+            'FSUB':   { bytes: 2 },
+            'FMUL':   { bytes: 2 },
+            'FDIV':   { bytes: 2 },
+            'FSQRT':  { bytes: 2 },
+            'FCMP':   { bytes: 2 },
+            'FSTORE': { bytes: 5 },
+            'FLD':    { bytes: 5 },
+            'FLD0':   { bytes: 6 },
+            'FLD1':   { bytes: 6 },
+            'FSWAP':  { bytes: 2 }
         };
 
-        this.reset();
-    }
 
+        this.regs = {
 
-    reset() {
-
-        this.registers = {
-            a: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-            e: 0,
-            h: 0,
-            l: 0,
-            sp: 0xFFFF,
-            pc: 0
+            'B': 0,
+            'C': 1,
+            'D': 2,
+            'E': 3,
+            'H': 4,
+            'L': 5,
+            'M': 6,
+            'A': 7
         };
 
-        // Flags principales del Intel 8080
-        this.flags = {
-            s: false,
-            z: false,
-            ac: false,
-            p: false,
-            cy: false
+
+        this.rps = {
+
+            'B': 0,
+            'C': 0,
+
+            'D': 1,
+            'E': 1,
+
+            'H': 2,
+            'L': 2,
+
+            'SP': 3,
+            'PSW': 3,
+
+            'BC': 0,
+            'DE': 1,
+            'HL': 2
         };
-
-        this.halted = false;
-
-        this.cpuStats.instructions = 0;
-        this.cpuStats.cycles = 0;
-
-        if (this.memory) {
-            this.memory.fill(0);
-        }
-
-        if (this.fpu) {
-            this.fpu.reset();
-        }
     }
 
 
-    
-    getRP(rp) {
+    assemble(source) {
 
-        switch (rp) {
+        const lines = source.split('\n');
 
-            case 'bc':
-                return (this.registers.b << 8) |
-                    this.registers.c;
+        const labels = {};
 
-            case 'de':
-                return (this.registers.d << 8) |
-                    this.registers.e;
+        let currentPC = 0;
 
-            case 'hl':
-                return (this.registers.h << 8) |
-                    this.registers.l;
+        // Dirección inicial del programa
+        let startAddress = null;
 
-            case 'sp':
-                return this.registers.sp;
 
-            default:
-                return 0;
-        }
-    }
+        // =========================
+        // PRIMERA PASADA
+        // =========================
 
+        const passes = lines.map(line => {
 
-    
-    setRP(rp, value) {
+            // Quitar comentarios
+            line = line.split(';')[0].trim();
 
-        value &= 0xFFFF;
-
-        switch (rp) {
-
-            case 'bc':
-                this.registers.b = (value >> 8) & 0xFF;
-                this.registers.c = value & 0xFF;
-                break;
-
-            case 'de':
-                this.registers.d = (value >> 8) & 0xFF;
-                this.registers.e = value & 0xFF;
-                break;
-
-            case 'hl':
-                this.registers.h = (value >> 8) & 0xFF;
-                this.registers.l = value & 0xFF;
-                break;
-
-            case 'sp':
-                this.registers.sp = value;
-                break;
-        }
-    }
-
-
-    // Convierte los flags del CPU al formato del registro F
-    getFlagByte() {
-
-        let res = 0x02;
-
-        if (this.flags.s) {
-            res |= 0x80;
-        }
-
-        if (this.flags.z) {
-            res |= 0x40;
-        }
-
-        if (this.flags.ac) {
-            res |= 0x10;
-        }
-
-        if (this.flags.p) {
-            res |= 0x04;
-        }
-
-        if (this.flags.cy) {
-            res |= 0x01;
-        }
-
-        return res;
-    }
-
-
-    
-    setFlagByte(val) {
-
-        this.flags.s = (val & 0x80) !== 0;
-        this.flags.z = (val & 0x40) !== 0;
-        this.flags.ac = (val & 0x10) !== 0;
-        this.flags.p = (val & 0x04) !== 0;
-        this.flags.cy = (val & 0x01) !== 0;
-    }
-
-
-    
-    updateFlags(val, setAC = false, acVal = 0) {
-
-        val &= 0xFF;
-
-        this.flags.z = val === 0;
-        this.flags.s = (val & 0x80) !== 0;
-        this.flags.p = this.checkParity(val);
-
-        if (setAC) {
-            this.flags.ac = acVal;
-        }
-    }
-
-
-  
-    checkParity(val) {
-
-        let count = 0;
-
-        for (let i = 0; i < 8; i++) {
-
-            if (val & (1 << i)) {
-                count++;
-            }
-        }
-
-        return count % 2 === 0;
-    }
-
-
-   
-    readMemory(addr) {
-
-        return this.memory[
-            addr & 0xFFFF
-        ];
-    }
-
-
-    writeMemory(addr, val) {
-
-        this.memory[
-            addr & 0xFFFF
-        ] = val & 0xFF;
-    }
-
-
-   
-    fetch() {
-
-        const byte =
-            this.readMemory(this.registers.pc);
-
-        this.registers.pc =
-            (this.registers.pc + 1) & 0xFFFF;
-
-        return byte;
-    }
-
-
-   
-    fetch16() {
-
-        const low = this.fetch();
-        const high = this.fetch();
-
-        return low | (high << 8);
-    }
-
-
-
-    push(value) {
-
-        value &= 0xFFFF;
-
-        this.registers.sp =
-            (this.registers.sp - 1) & 0xFFFF;
-
-        this.writeMemory(
-            this.registers.sp,
-            (value >> 8) & 0xFF
-        );
-
-        this.registers.sp =
-            (this.registers.sp - 1) & 0xFFFF;
-
-        this.writeMemory(
-            this.registers.sp,
-            value & 0xFF
-        );
-    }
-
-
-  
-    pop() {
-
-        const low =
-            this.readMemory(this.registers.sp);
-
-        this.registers.sp =
-            (this.registers.sp + 1) & 0xFFFF;
-
-        const high =
-            this.readMemory(this.registers.sp);
-
-        this.registers.sp =
-            (this.registers.sp + 1) & 0xFFFF;
-
-        return low | (high << 8);
-    }
-
-
- 
-    getRegByCode(code) {
-
-        switch (code) {
-
-            case 0:
-                return this.registers.b;
-
-            case 1:
-                return this.registers.c;
-
-            case 2:
-                return this.registers.d;
-
-            case 3:
-                return this.registers.e;
-
-            case 4:
-                return this.registers.h;
-
-            case 5:
-                return this.registers.l;
-
-            case 6:
-                return this.readMemory(
-                    this.getRP('hl')
-                );
-
-            case 7:
-                return this.registers.a;
-
-            default:
-                return 0;
-        }
-    }
-
-
-    
-    setRegByCode(code, val) {
-
-        val &= 0xFF;
-
-        switch (code) {
-
-            case 0:
-                this.registers.b = val;
-                break;
-
-            case 1:
-                this.registers.c = val;
-                break;
-
-            case 2:
-                this.registers.d = val;
-                break;
-
-            case 3:
-                this.registers.e = val;
-                break;
-
-            case 4:
-                this.registers.h = val;
-                break;
-
-            case 5:
-                this.registers.l = val;
-                break;
-
-            case 6:
-                this.writeMemory(
-                    this.getRP('hl'),
-                    val
-                );
-                break;
-
-            case 7:
-                this.registers.a = val;
-                break;
-        }
-    }
-
-
-    
-    executeALU(op, val) {
-
-        let res;
-
-        switch (op) {
-
-            case 0: // ADD
-
-                res =
-                    this.registers.a + val;
-
-                this.flags.cy =
-                    res > 0xFF;
-
-                this.flags.ac =
-                    (
-                        (this.registers.a & 0x0F) +
-                        (val & 0x0F)
-                    ) > 0x0F;
-
-                this.registers.a =
-                    res & 0xFF;
-
-                break;
-
-
-            case 1: // ADC
-
-                const carry =
-                    this.flags.cy ? 1 : 0;
-
-                res =
-                    this.registers.a +
-                    val +
-                    carry;
-
-                this.flags.cy =
-                    res > 0xFF;
-
-                this.flags.ac =
-                    (
-                        (this.registers.a & 0x0F) +
-                        (val & 0x0F) +
-                        carry
-                    ) > 0x0F;
-
-                this.registers.a =
-                    res & 0xFF;
-
-                break;
-
-
-            case 2: // SUB
-
-                res =
-                    this.registers.a - val;
-
-                this.flags.cy =
-                    res < 0;
-
-                this.flags.ac =
-                    (
-                        (this.registers.a & 0x0F) +
-                        ((~val) & 0x0F) +
-                        1
-                    ) > 0x0F;
-
-                this.registers.a =
-                    res & 0xFF;
-
-                break;
-
-
-            case 3: // SBB
-
-                const borrow =
-                    this.flags.cy ? 1 : 0;
-
-                res =
-                    this.registers.a -
-                    val -
-                    borrow;
-
-                this.flags.cy =
-                    res < 0;
-
-                this.flags.ac =
-                    (
-                        (this.registers.a & 0x0F) +
-                        ((~val) & 0x0F) +
-                        (borrow ? 0 : 1)
-                    ) > 0x0F;
-
-                this.registers.a =
-                    res & 0xFF;
-
-                break;
-
-
-            case 4: // ANA
-
-                res =
-                    this.registers.a & val;
-
-                this.flags.cy = false;
-
-                this.flags.ac =
-                    ((this.registers.a | val) & 0x08) !== 0;
-
-                this.registers.a = res;
-
-                break;
-
-
-            case 5: // XRA
-
-                res =
-                    this.registers.a ^ val;
-
-                this.flags.cy = false;
-                this.flags.ac = false;
-
-                this.registers.a = res;
-
-                break;
-
-
-            case 6: // ORA
-
-                res =
-                    this.registers.a | val;
-
-                this.flags.cy = false;
-                this.flags.ac = false;
-
-                this.registers.a = res;
-
-                break;
-
-
-            case 7: // CMP
-
-                res =
-                    this.registers.a - val;
-
-                this.flags.cy =
-                    res < 0;
-
-                this.flags.ac =
-                    (
-                        (this.registers.a & 0x0F) +
-                        ((~val) & 0x0F) +
-                        1
-                    ) > 0x0F;
-
-                this.updateFlags(res);
-
-                return;
-        }
-
-        this.updateFlags(
-            this.registers.a
-        );
-    }
-
-
-    execute(opcode) {
-
-        // Instrucción sin operación
-        if (opcode === 0x00) {
-            return;
-        }
-
-
-        
-        if (opcode === 0x76) {
-
-            this.halted = true;
-
-            return;
-        }
-
-
-        // MVI A, immediate
-        if (opcode === 0x3E) {
-
-            this.registers.a =
-                this.fetch();
-
-            this.updateFlags(
-                this.registers.a
-            );
-
-            return;
-        }
-
-
-        // MVI B, immediate
-        if (opcode === 0x06) {
-
-            this.registers.b =
-                this.fetch();
-
-            return;
-        }
-
-
-        // MVI C, immediate
-        if (opcode === 0x0E) {
-
-            this.registers.c =
-                this.fetch();
-
-            return;
-        }
-
-
-        // MVI D, immediate
-        if (opcode === 0x16) {
-
-            this.registers.d =
-                this.fetch();
-
-            return;
-        }
-
-
-        // MVI E, immediate
-        if (opcode === 0x1E) {
-
-            this.registers.e =
-                this.fetch();
-
-            return;
-        }
-
-
-        // MVI H, immediate
-        if (opcode === 0x26) {
-
-            this.registers.h =
-                this.fetch();
-
-            return;
-        }
-
-
-        // MVI L, immediate
-        if (opcode === 0x2E) {
-
-            this.registers.l =
-                this.fetch();
-
-            return;
-        }
-
-
-        // Incrementa el acumulador
-        if (opcode === 0x3C) {
-
-            const old =
-                this.registers.a;
-
-            const result =
-                (old + 1) & 0xFF;
-
-            this.flags.ac =
-                ((old & 0x0F) + 1) > 0x0F;
-
-            this.registers.a =
-                result;
-
-            this.updateFlags(
-                result,
-                true,
-                this.flags.ac
-            );
-
-            return;
-        }
-
-
-        
-        if (opcode === 0x3D) {
-
-            const old =
-                this.registers.a;
-
-            const result =
-                (old - 1) & 0xFF;
-
-            this.flags.ac =
-                (
-                    (old & 0x0F) +
-                    ((~1) & 0x0F) +
-                    1
-                ) > 0x0F;
-
-            this.registers.a =
-                result;
-
-            this.updateFlags(
-                result,
-                true,
-                this.flags.ac
-            );
-
-            return;
-        }
-
-
-      
-        if (
-            opcode >= 0x40 &&
-            opcode <= 0x7F &&
-            opcode !== 0x76
-        ) {
-
-            const dest =
-                (opcode >> 3) & 7;
-
-            const src =
-                opcode & 7;
-
-            const value =
-                this.getRegByCode(src);
-
-            this.setRegByCode(
-                dest,
-                value
-            );
-
-            return;
-        }
-
-
-     
-        if (
-            opcode >= 0x80 &&
-            opcode <= 0xBF
-        ) {
-
-            const op =
-                (opcode >> 3) & 7;
-
-            const src =
-                opcode & 7;
-
-            const value =
-                this.getRegByCode(src);
-
-            this.executeALU(
-                op,
-                value
-            );
-
-            return;
-        }
-
-
-        // CPI 
-        if (opcode === 0xFE) {
-
-            const value =
-                this.fetch();
-
-            const result =
-                this.registers.a - value;
-
-            this.flags.cy =
-                result < 0;
-
-            this.flags.ac =
-                (
-                    (this.registers.a & 0x0F) +
-                    ((~value) & 0x0F) +
-                    1
-                ) > 0x0F;
-
-            this.updateFlags(result);
-
-            return;
-        }
-
-
-        // JNZ - Jump if Not Zero
-        if (opcode === 0xC2) {
-
-            const addr =
-                this.fetch16();
-
-            if (!this.flags.z) {
-                this.registers.pc = addr;
+            if (!line) {
+                return null;
             }
 
-            return;
-        }
+
+            let label = null;
 
 
-        // JZ - Jump if Zero
-        if (opcode === 0xCA) {
+            // =========================
+            // LABEL
+            // =========================
 
-            const addr =
-                this.fetch16();
+            if (line.includes(':')) {
 
-            if (this.flags.z) {
-                this.registers.pc = addr;
+                const parts =
+                    line.split(':');
+
+                label =
+                    parts[0].trim();
+
+                line =
+                    parts.slice(1)
+                        .join(':')
+                        .trim();
+
+                if (label) {
+                    labels[label] =
+                        currentPC;
+                }
             }
 
-            return;
-        }
 
-
-        // JC - Jump if Carry
-        if (opcode === 0xDA) {
-
-            const addr =
-                this.fetch16();
-
-            if (this.flags.cy) {
-                this.registers.pc = addr;
+            if (!line) {
+                return null;
             }
 
-            return;
-        }
+
+            const tokens =
+                line
+                    .split(/[\s,]+/)
+                    .filter(t => t);
 
 
-        // JNC - Jump if No Carry
-        if (opcode === 0xD2) {
-
-            const addr =
-                this.fetch16();
-
-            if (!this.flags.cy) {
-                this.registers.pc = addr;
-            }
-
-            return;
-        }
+            const mnemonic =
+                tokens[0].toUpperCase();
 
 
-        // JMP - salto incondicional
-        if (opcode === 0xC3) {
-
-            this.registers.pc =
-                this.fetch16();
-
-            return;
-        }
-
-
-        // CALL
-        if (opcode === 0xCD) {
-
-            const addr =
-                this.fetch16();
-
-            this.push(
-                this.registers.pc
+            console.log(
+                'Assembler mnemonic:',
+                mnemonic
             );
 
-            this.registers.pc = addr;
 
-            return;
-        }
+            // =========================
+            // ORG
+            // =========================
 
+            if (mnemonic === 'ORG') {
 
-        // RET
-        if (opcode === 0xC9) {
-
-            this.registers.pc =
-                this.pop();
-
-            return;
-        }
-
-
-        // PUSH BC
-        if (opcode === 0xC5) {
-
-            this.push(
-                this.getRP('bc')
-            );
-
-            return;
-        }
-
-
-        // PUSH DE
-        if (opcode === 0xD5) {
-
-            this.push(
-                this.getRP('de')
-            );
-
-            return;
-        }
-
-
-        // PUSH HL
-        if (opcode === 0xE5) {
-
-            this.push(
-                this.getRP('hl')
-            );
-
-            return;
-        }
-
-
-        // PUSH PSW
-        if (opcode === 0xF5) {
-
-            this.push(
-                (this.registers.a << 8) |
-                this.getFlagByte()
-            );
-
-            return;
-        }
-
-
-        // POP BC
-        if (opcode === 0xC1) {
-
-            this.setRP(
-                'bc',
-                this.pop()
-            );
-
-            return;
-        }
-
-
-        // POP DE
-        if (opcode === 0xD1) {
-
-            this.setRP(
-                'de',
-                this.pop()
-            );
-
-            return;
-        }
-
-
-        // POP HL
-        if (opcode === 0xE1) {
-
-            this.setRP(
-                'hl',
-                this.pop()
-            );
-
-            return;
-        }
-
-
-        // POP PSW
-        if (opcode === 0xF1) {
-
-            const value =
-                this.pop();
-
-            this.registers.a =
-                (value >> 8) & 0xFF;
-
-            this.setFlagByte(
-                value & 0xFF
-            );
-
-            return;
-        }
-
-
-        // RLC
-        if (opcode === 0x07) {
-
-            const carry =
-                (this.registers.a >> 7) & 1;
-
-            this.registers.a =
-                (
-                    (this.registers.a << 1) |
-                    carry
-                ) & 0xFF;
-
-            this.flags.cy =
-                !!carry;
-
-            return;
-        }
-
-
-        // RRC
-        if (opcode === 0x0F) {
-
-            const carry =
-                this.registers.a & 1;
-
-            this.registers.a =
-                (
-                    (this.registers.a >> 1) |
-                    (carry << 7)
-                ) & 0xFF;
-
-            this.flags.cy =
-                !!carry;
-
-            return;
-        }
-
-
-        // RAL
-        if (opcode === 0x17) {
-
-            const carry =
-                this.flags.cy ? 1 : 0;
-
-            this.flags.cy =
-                !!(
-                    (this.registers.a >> 7) & 1
-                );
-
-            this.registers.a =
-                (
-                    (this.registers.a << 1) |
-                    carry
-                ) & 0xFF;
-
-            return;
-        }
-
-
-        // RAR
-        if (opcode === 0x1F) {
-
-            const carry =
-                this.flags.cy ? 1 : 0;
-
-            this.flags.cy =
-                !!(this.registers.a & 1);
-
-            this.registers.a =
-                (
-                    (this.registers.a >> 1) |
-                    (carry << 7)
-                ) & 0xFF;
-
-            return;
-        }
-
-
-        // Complementa el acumulador
-        if (opcode === 0x2F) {
-
-            this.registers.a =
-                (~this.registers.a) & 0xFF;
-
-            return;
-        }
-
-
-        // DAA - Decimal Adjust Accumulator
-        if (opcode === 0x27) {
-
-            let result =
-                this.registers.a;
-
-            let correction = 0;
-
-            if (
-                (result & 0x0F) > 9 ||
-                this.flags.ac
-            ) {
-                correction |= 0x06;
-            }
-
-            if (
-                result > 0x99 ||
-                this.flags.cy
-            ) {
-
-                correction |= 0x60;
-                this.flags.cy = true;
-            }
-
-            result += correction;
-
-            this.flags.ac =
-                (
-                    (this.registers.a & 0x0F) +
-                    (correction & 0x0F)
-                ) > 0x0F;
-
-            this.registers.a =
-                result & 0xFF;
-
-            this.updateFlags(
-                this.registers.a
-            );
-
-            return;
-        }
-
-
-        // Set Carry
-        if (opcode === 0x37) {
-
-            this.flags.cy = true;
-
-            return;
-        }
-
-
-        // Complement Carry
-        if (opcode === 0x3F) {
-
-            this.flags.cy =
-                !this.flags.cy;
-
-            return;
-        }
-
-
-        // IN
-        if (opcode === 0xDB) {
-
-            this.fetch();
-
-            return;
-        }
-
-
-        // OUT
-        if (opcode === 0xD3) {
-
-            this.fetch();
-
-            return;
-        }
-
-
-        // EI / DI
-        if (
-            opcode === 0xFB ||
-            opcode === 0xF3
-        ) {
-            return;
-        }
-
-
-        throw new Error(
-            `Unsupported opcode: ${
-                opcode
-                    .toString(16)
-                    .toUpperCase()
-                    .padStart(2, '0')
-            }`
-        );
-    }
-
-
-    
-    // FPU - instrucciones del coprocesador de punto flotante
-   
-
-    executeFPU() {
-
-        const operation =
-            this.fetch();
-
-        switch (operation) {
-
-            // FP0 = FP0 + FP1
-            case 0x01:
-
-                this.fpu.fadd();
-
-                break;
-
-
-            // FP0 = FP0 - FP1
-            case 0x02:
-
-                this.fpu.fsub();
-
-                break;
-
-
-            // FP0 = FP0 * FP1
-            case 0x03:
-
-                this.fpu.fmul();
-
-                break;
-
-
-            // FP0 = FP0 / FP1
-            case 0x07:
-
-                this.fpu.fdiv();
-
-                break;
-
-
-        
-            case 0x08:
-
-                this.fpu.fsqrt();
-
-                break;
-
-
-            
-            case 0x09:
-
-                this.fpu.fcmp();
-
-                break;
-
-
-           
-            case 0x0A: {
-
-                const registerCode =
-                    this.fetch();
-
-                const registers = [
-                    'f0',
-                    'f1',
-                    'f2',
-                    'f3'
-                ];
-
-                if (registerCode > 3) {
-                    throw new Error(
-                        `Registro FPU inválido: ${registerCode}`
+                currentPC =
+                    this.parseValue(
+                        tokens[1]
                     );
+
+
+                if (startAddress === null) {
+                    startAddress =
+                        currentPC;
                 }
 
-                const address =
-                    this.fetch16();
 
-                const value =
-                    this.fpu.fstore(
-                        registers[registerCode]
-                    );
-
-                // La memoria almacena el número como IEEE-754 de 32 bits
-                const bits =
-                    this.fpu.toIEEE754(value);
-
-                this.memory[address] =
-                    bits & 0xFF;
-
-                this.memory[(address + 1) & 0xFFFF] =
-                    (bits >> 8) & 0xFF;
-
-                this.memory[(address + 2) & 0xFFFF] =
-                    (bits >> 16) & 0xFF;
-
-                this.memory[(address + 3) & 0xFFFF] =
-                    (bits >> 24) & 0xFF;
-
-                break;
-            }
-
-
-           
-            case 0x0B: {
-
-                const registerCode =
-                    this.fetch();
-
-                const registers = [
-                    'f0',
-                    'f1',
-                    'f2',
-                    'f3'
-                ];
-
-                if (registerCode > 3) {
-                    throw new Error(
-                        `Registro FPU inválido: ${registerCode}`
-                    );
+                if (label) {
+                    labels[label] =
+                        currentPC;
                 }
 
-                const address =
-                    this.fetch16();
 
-                const bits =
-                    this.memory[address] |
-                    (this.memory[(address + 1) & 0xFFFF] << 8) |
-                    (this.memory[(address + 2) & 0xFFFF] << 16) |
-                    (this.memory[(address + 3) & 0xFFFF] << 24);
+                return {
 
-                const value =
-                    this.fpu.fromIEEE754(bits);
+                    type: 'directive',
 
-                this.fpu.fload(
-                    registers[registerCode],
-                    value
-                );
+                    mnemonic,
 
-                break;
+                    tokens,
+
+                    pc: currentPC
+                };
             }
 
 
-            
-            case 0x04: {
+            // =========================
+            // END
+            // =========================
 
-                const bits =
-                    this.fetch16() |
-                    (this.fetch16() << 16);
+            if (mnemonic === 'END') {
 
-                const value =
-                    this.fpu.fromIEEE754(bits);
+                return {
 
-                this.fpu.fload(
-                    'f0',
-                    value
-                );
+                    type: 'directive',
 
-                break;
+                    mnemonic,
+
+                    tokens,
+
+                    pc: currentPC
+                };
             }
 
 
-           
-            case 0x05: {
+            // =========================
+            // DB
+            // =========================
 
-                const bits =
-                    this.fetch16() |
-                    (this.fetch16() << 16);
+            if (mnemonic === 'DB') {
 
-                const value =
-                    this.fpu.fromIEEE754(bits);
+                const pc =
+                    currentPC;
 
-                this.fpu.fload(
-                    'f1',
-                    value
-                );
 
-                break;
+                currentPC +=
+                    tokens.length - 1;
+
+
+                return {
+
+                    type: 'data',
+
+                    mnemonic,
+
+                    tokens,
+
+                    pc
+                };
             }
 
 
-            // Intercambia FP0 y FP1
-            case 0x06:
+            // =========================
+            // BUSCAR OPCODE
+            // =========================
 
-                this.fpu.fswap();
+            const info =
+                this.opcodes[mnemonic];
 
-                break;
 
-
-            default:
+            if (!info) {
 
                 throw new Error(
-                    `Unsupported FPU opcode: ED ${
-                        operation
-                            .toString(16)
-                            .toUpperCase()
-                            .padStart(2, '0')
-                    }`
+                    `Unknown mnemonic: ${mnemonic}`
+                );
+            }
+
+
+            const pc =
+                currentPC;
+
+
+            currentPC +=
+                info.bytes;
+
+
+            return {
+
+                type: 'instruction',
+
+                mnemonic,
+
+                tokens,
+
+                pc,
+
+                info
+            };
+
+        }).filter(l => l);
+
+
+        // =========================
+        // SEGUNDA PASADA
+        // =========================
+
+        const binary =
+            new Uint8Array(65536);
+
+
+        let maxAddr = 0;
+
+
+        passes.forEach(line => {
+
+            // =========================
+            // DIRECTIVAS
+            // =========================
+
+            if (line.type === 'directive') {
+                return;
+            }
+
+
+            let pc =
+                line.pc;
+
+
+            // =========================
+            // DB
+            // =========================
+
+            if (line.type === 'data') {
+
+                for (
+                    let i = 1;
+                    i < line.tokens.length;
+                    i++
+                ) {
+
+                    binary[pc++] =
+                        this.parseValue(
+                            line.tokens[i],
+                            labels
+                        ) & 0xFF;
+                }
+            }
+
+
+            // =========================
+            // INSTRUCCIÓN
+            // =========================
+
+            else {
+
+                const bytes =
+                    this.generateOpcode(
+                        line,
+                        labels
+                    );
+
+
+                for (
+                    let i = 0;
+                    i < bytes.length;
+                    i++
+                ) {
+
+                    binary[pc++] =
+                        bytes[i];
+                }
+            }
+
+
+            if (pc > maxAddr) {
+                maxAddr = pc;
+            }
+        });
+
+
+        return {
+
+            binary,
+
+            maxAddr,
+
+            startAddress:
+                startAddress ?? 0
+        };
+    }
+
+
+    generateOpcode(line, labels) {
+
+        const mnemonic =
+            line.mnemonic;
+
+
+        const tokens =
+            line.tokens;
+
+
+        let bytes = [];
+
+
+        const r1 =
+            tokens[1]
+                ? tokens[1].toUpperCase()
+                : null;
+
+
+        const r2 =
+            tokens[2]
+                ? tokens[2].toUpperCase()
+                : null;
+
+
+        // =====================================================
+        // FPU
+        // =====================================================
+
+        if (
+            [
+                'FADD',
+                'FSUB',
+                'FMUL',
+                'FSQRT',
+                'FDIV',
+                'FCMP',
+                'FSTORE',
+                'FLD',
+                'FLD0',
+                'FLD1',
+                'FSWAP'
+            ].includes(mnemonic)
+        ) {
+
+            bytes.push(0xED);
+
+
+            switch (mnemonic) {
+
+                case 'FADD':
+
+                    bytes.push(0x01);
+
+                    break;
+
+
+                case 'FSUB':
+
+                    bytes.push(0x02);
+
+                    break;
+
+
+                case 'FMUL':
+
+                    bytes.push(0x03);
+
+                    break;
+
+
+                case 'FDIV':
+
+                    bytes.push(0x07);
+
+                    break;
+
+
+                case 'FSQRT':
+
+                    bytes.push(0x08);
+
+                    break;
+
+
+                case 'FCMP':
+
+                    bytes.push(0x09);
+
+                    break;
+
+
+                case 'FSTORE': {
+
+                    bytes.push(0x0A);
+
+
+                    const register =
+                        tokens[1]
+                            ? tokens[1].toUpperCase()
+                            : null;
+
+
+                    const registerCodes = {
+
+                        'FP0': 0x00,
+                        'FP1': 0x01,
+                        'FP2': 0x02,
+                        'FP3': 0x03
+                    };
+
+
+                    if (
+                        !register ||
+                        registerCodes[register] === undefined
+                    ) {
+
+                        throw new Error(
+                            `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
+                        );
+                    }
+
+
+                    bytes.push(
+                        registerCodes[register]
+                    );
+
+
+                    const address =
+                        this.parseValue(
+                            tokens[2],
+                            labels
+                        );
+
+
+                    bytes.push(
+
+                        address & 0xFF,
+
+                        (address >> 8) & 0xFF
+                    );
+
+
+                    break;
+                }
+
+
+                case 'FLD': {
+
+                    bytes.push(0x0B);
+
+
+                    const register =
+                        tokens[1]
+                            ? tokens[1].toUpperCase()
+                            : null;
+
+
+                    const registerCodes = {
+
+                        'FP0': 0x00,
+                        'FP1': 0x01,
+                        'FP2': 0x02,
+                        'FP3': 0x03
+                    };
+
+
+                    if (
+                        !register ||
+                        registerCodes[register] === undefined
+                    ) {
+
+                        throw new Error(
+                            `Registro FPU inválido: ${register}. Use FP0, FP1, FP2 o FP3.`
+                        );
+                    }
+
+
+                    bytes.push(
+                        registerCodes[register]
+                    );
+
+
+                    const address =
+                        this.parseValue(
+                            tokens[2],
+                            labels
+                        );
+
+
+                    bytes.push(
+
+                        address & 0xFF,
+
+                        (address >> 8) & 0xFF
+                    );
+
+
+                    break;
+                }
+
+
+                case 'FLD0':
+                case 'FLD1': {
+
+                    bytes.push(
+                        mnemonic === 'FLD0'
+                            ? 0x04
+                            : 0x05
+                    );
+
+
+                    const val =
+                        this.parseValue(
+                            tokens[1],
+                            labels
+                        );
+
+
+                    const buffer =
+                        new ArrayBuffer(4);
+
+
+                    const view =
+                        new DataView(buffer);
+
+
+                    view.setFloat32(
+                        0,
+                        val,
+                        true
+                    );
+
+
+                    const u8 =
+                        new Uint8Array(buffer);
+
+
+                    bytes.push(
+
+                        u8[0],
+                        u8[1],
+                        u8[2],
+                        u8[3]
+                    );
+
+
+                    break;
+                }
+
+
+                case 'FSWAP':
+
+                    bytes.push(0x06);
+
+                    break;
+            }
+
+
+            return bytes;
+        }
+
+
+        // =====================================================
+        // 8080
+        // =====================================================
+
+        let byte1 =
+            line.info
+                ? line.info.code
+                : 0;
+
+
+        let byte2 = 0;
+
+        let byte3 = 0;
+
+
+        // =========================
+        // MOV
+        // =========================
+
+        if (mnemonic === 'MOV') {
+
+            if (
+                this.regs[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register: ${r1} in MOV instruction`
+                );
+            }
+
+
+            if (
+                this.regs[r2] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register: ${r2} in MOV instruction`
+                );
+            }
+
+
+            if (
+                r1 === 'M' &&
+                r2 === 'M'
+            ) {
+
+                throw new Error(
+                    `Cannot use MOV M, M (invalid instruction)`
+                );
+            }
+
+
+            byte1 =
+                0x40 |
+                (this.regs[r1] << 3) |
+                this.regs[r2];
+
+
+            bytes.push(byte1);
+        }
+
+
+        // =========================
+        // MVI
+        // =========================
+
+        else if (mnemonic === 'MVI') {
+
+            if (
+                this.regs[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register: ${r1} in MVI instruction`
+                );
+            }
+
+
+            byte1 =
+                0x06 |
+                (this.regs[r1] << 3);
+
+
+            byte2 =
+                this.parseValue(
+                    tokens[2],
+                    labels
+                ) & 0xFF;
+
+
+            bytes.push(
+
+                byte1,
+
+                byte2
+            );
+        }
+
+
+        // =========================
+        // LXI
+        // =========================
+
+        else if (mnemonic === 'LXI') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in LXI instruction`
+                );
+            }
+
+
+            byte1 =
+                0x01 |
+                (this.rps[r1] << 4);
+
+
+            const val =
+                this.parseValue(
+                    tokens[2],
+                    labels
+                );
+
+
+            byte2 =
+                val & 0xFF;
+
+
+            byte3 =
+                (val >> 8) & 0xFF;
+
+
+            bytes.push(
+
+                byte1,
+
+                byte2,
+
+                byte3
+            );
+        }
+
+
+        // =========================
+        // ALU
+        // =========================
+
+        else if (
+            [
+                'ADD',
+                'ADC',
+                'SUB',
+                'SBB',
+                'ANA',
+                'XRA',
+                'ORA',
+                'CMP'
+            ].includes(mnemonic)
+        ) {
+
+            if (
+                this.regs[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register: ${r1} in ${mnemonic} instruction`
+                );
+            }
+
+
+            const base = {
+
+                'ADD': 0x80,
+                'ADC': 0x88,
+                'SUB': 0x90,
+                'SBB': 0x98,
+                'ANA': 0xA0,
+                'XRA': 0xA8,
+                'ORA': 0xB0,
+                'CMP': 0xB8
+            };
+
+
+            byte1 =
+                base[mnemonic] |
+                this.regs[r1];
+
+
+            bytes.push(byte1);
+        }
+
+
+        // =========================
+        // INR
+        // =========================
+
+        else if (mnemonic === 'INR') {
+
+            if (
+                this.regs[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register: ${r1} in INR instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x04 |
+                (this.regs[r1] << 3)
+            );
+        }
+
+
+        // =========================
+        // DCR
+        // =========================
+
+        else if (mnemonic === 'DCR') {
+
+            if (
+                this.regs[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register: ${r1} in DCR instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x05 |
+                (this.regs[r1] << 3)
+            );
+        }
+
+
+        // =========================
+        // INX
+        // =========================
+
+        else if (mnemonic === 'INX') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in INX instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x03 |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // DCX
+        // =========================
+
+        else if (mnemonic === 'DCX') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in DCX instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x0B |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // DAD
+        // =========================
+
+        else if (mnemonic === 'DAD') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in DAD instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x09 |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // PUSH
+        // =========================
+
+        else if (mnemonic === 'PUSH') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in PUSH instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0xC5 |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // POP
+        // =========================
+
+        else if (mnemonic === 'POP') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in POP instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0xC1 |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // STAX
+        // =========================
+
+        else if (mnemonic === 'STAX') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in STAX instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x02 |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // LDAX
+        // =========================
+
+        else if (mnemonic === 'LDAX') {
+
+            if (
+                this.rps[r1] === undefined
+            ) {
+
+                throw new Error(
+                    `Invalid register pair: ${r1} in LDAX instruction`
+                );
+            }
+
+
+            bytes.push(
+
+                0x0A |
+                (this.rps[r1] << 4)
+            );
+        }
+
+
+        // =========================
+        // RST
+        // =========================
+
+        else if (mnemonic === 'RST') {
+
+            const val =
+                this.parseValue(
+                    tokens[1],
+                    labels
+                );
+
+
+            if (
+                isNaN(val) ||
+                val < 0 ||
+                val > 7
+            ) {
+
+                throw new Error(
+                    `Invalid RST number: ${tokens[1]}. Must be 0-7.`
+                );
+            }
+
+
+            bytes.push(
+
+                0xC7 |
+                (val << 3)
+            );
+        }
+
+
+        // =========================
+        // Instrucción de 3 bytes
+        // =========================
+
+        else if (
+            line.info.bytes === 3
+        ) {
+
+            const val =
+                this.parseValue(
+                    tokens[1],
+                    labels
+                );
+
+
+            bytes.push(
+
+                byte1,
+
+                val & 0xFF,
+
+                (val >> 8) & 0xFF
+            );
+        }
+
+
+        // =========================
+        // Instrucción de 2 bytes
+        // =========================
+
+        else if (
+            line.info.bytes === 2
+        ) {
+
+            bytes.push(
+
+                byte1,
+
+                this.parseValue(
+                    tokens[1],
+                    labels
+                ) & 0xFF
+            );
+        }
+
+
+        // =========================
+        // Instrucción de 1 byte
+        // =========================
+
+        else {
+
+            bytes.push(byte1);
+        }
+
+
+        return bytes;
+    }
+
+
+    parseValue(
+        val,
+        labels = {}
+    ) {
+
+        if (!val) {
+            return 0;
+        }
+
+
+        // =========================
+        // LABEL
+        // =========================
+
+        if (
+            labels[val] !== undefined
+        ) {
+
+            return labels[val];
+        }
+
+
+        let parsed;
+
+
+        // =========================
+        // HEX con H
+        // =========================
+
+        if (
+            val.endsWith('H') ||
+            val.endsWith('h')
+        ) {
+
+            parsed =
+                parseInt(
+                    val.slice(0, -1),
+                    16
                 );
         }
-    }
 
 
-    
-    step() {
+        // =========================
+        // HEX con 0x
+        // =========================
 
-        if (this.halted) {
-            return;
+        else if (
+            val.startsWith('0X') ||
+            val.startsWith('0x')
+        ) {
+
+            parsed =
+                parseInt(
+                    val,
+                    16
+                );
         }
 
-        const opcode =
-            this.fetch();
 
-        const previousFPUCycles =
-            this.fpu.stats.cycles;
+        // =========================
+        // DECIMAL
+        // =========================
 
-        
-        if (opcode === 0xED) {
+        else {
 
-            this.executeFPU();
-
-        } else {
-
-            this.execute(opcode);
+            parsed =
+                parseFloat(val);
         }
 
-        this.cpuStats.instructions++;
 
-        
-        const fpuCycleDelta =
-            this.fpu.stats.cycles -
-            previousFPUCycles;
+        if (isNaN(parsed)) {
 
-        if (fpuCycleDelta > 0) {
+            if (
+                /^[A-Za-z_]/.test(val)
+            ) {
 
-            this.cpuStats.cycles +=
-                fpuCycleDelta;
+                throw new Error(
+                    `Undefined label: ${val}`
+                );
+            }
 
-        } else {
+            else {
 
-            
-            this.cpuStats.cycles += 4;
+                throw new Error(
+                    `Invalid numeric value or token: ${val}`
+                );
+            }
         }
+
+
+        return parsed;
     }
 }
 
 
+// =========================
+// EXPORTS
+// =========================
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Intel8080;
-}
+if (
+    typeof module !== 'undefined'
+) {
 
-
-
-if (typeof window !== 'undefined') {
-    window.Intel8080 = Intel8080;
+    module.exports =
+        Assembler8080;
 }
